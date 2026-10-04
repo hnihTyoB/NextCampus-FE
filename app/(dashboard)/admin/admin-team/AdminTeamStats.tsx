@@ -10,23 +10,22 @@ import Spinner from "@/components/ui/Spinner";
 
 export default function AdminTeamStats() {
     const t = useTranslations();
-    const excludeRoles = "LEADER,INTERN";
 
     const { data: allData, isPending: allLoading, isError } = useQuery({
-        queryKey: ["users", { excludeRoles, limit: 1 }],
-        queryFn: () => getUsersService({ excludeRoles, limit: 1 }),
+        queryKey: ["users", { portalType: "ADMIN", limit: 1 }],
+        queryFn: () => getUsersService({ portalType: "ADMIN", limit: 1 }),
     });
 
     const { data: activeData, isPending: activeLoading } = useQuery({
-        queryKey: ["users", { excludeRoles, isActive: true, limit: 1 }],
+        queryKey: ["users", { portalType: "ADMIN", isActive: true, limit: 1 }],
         queryFn: () =>
-            getUsersService({ excludeRoles, isActive: true, limit: 1 }),
+            getUsersService({ portalType: "ADMIN", isActive: true, limit: 1 }),
     });
 
     const { data: inactiveData, isPending: inactiveLoading } = useQuery({
-        queryKey: ["users", { excludeRoles, isActive: false, limit: 1 }],
+        queryKey: ["users", { portalType: "ADMIN", isActive: false, limit: 1 }],
         queryFn: () =>
-            getUsersService({ excludeRoles, isActive: false, limit: 1 }),
+            getUsersService({ portalType: "ADMIN", isActive: false, limit: 1 }),
     });
 
     const isPending = allLoading || activeLoading || inactiveLoading;

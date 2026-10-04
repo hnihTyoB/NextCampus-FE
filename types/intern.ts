@@ -3,6 +3,11 @@ export interface InternUser {
     email: string;
     fullName: string | null;
     isActive: boolean;
+    role?: {
+        id: string;
+        name: string;
+        portalType: string;
+    } | null;
 }
 
 export interface Intern {

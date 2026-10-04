@@ -11,6 +11,11 @@ export interface LeaderUser {
     fullName: string | null;
     isActive: boolean;
     avatarUrl: string | null;
+    role?: {
+        id: string;
+        name: string;
+        portalType: string;
+    } | null;
 }
 
 export interface Leader {

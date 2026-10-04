@@ -11,6 +11,8 @@ export interface ApiError {
 export interface UserRole {
   id: string;
   name: string;
+  isSystem?: boolean;
+  portalType?: "ADMIN" | "LEADER" | "INTERN";
 }
 
 export interface User {
@@ -51,6 +53,7 @@ export interface UserQueryParams {
   email?: string;
   fullName?: string;
   roleName?: string;
+  portalType?: "ADMIN" | "LEADER" | "INTERN";
   excludeRoles?: string;
   isActive?: boolean;
   sortBy?: "createdAt" | "email" | "fullName";

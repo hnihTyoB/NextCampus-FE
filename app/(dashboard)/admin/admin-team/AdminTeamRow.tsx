@@ -104,6 +104,13 @@ export default function AdminTeamRow({ admin }: AdminTeamRowProps) {
                     </div>
                 </div>
 
+                {/* Role */}
+                <div>
+                    <span className="inline-flex items-center gap-1.5 rounded-full border border-sky-300 bg-sky-100/80 px-2.5 py-1 text-xs font-semibold text-sky-700 dark:border-sky-400/30 dark:bg-sky-500/10 dark:text-sky-300">
+                        {admin.role?.name ?? "—"}
+                    </span>
+                </div>
+
                 {/* Status */}
                 <div>
                     {canUpdate ? (

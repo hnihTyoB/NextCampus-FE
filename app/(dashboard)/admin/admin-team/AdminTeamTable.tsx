@@ -15,7 +15,7 @@ import Spinner from "@/components/ui/Spinner";
 import AdminTeamRow from "./AdminTeamRow";
 
 const COLUMNS =
-    "minmax(280px, 3fr) minmax(140px, 1.2fr) minmax(140px, 1.2fr) 40px";
+    "minmax(240px, 2.5fr) minmax(130px, 1.2fr) minmax(120px, 1fr) minmax(140px, 1.2fr) 40px";
 
 export default function AdminTeamTable() {
     const t = useTranslations();
@@ -25,15 +25,17 @@ export default function AdminTeamTable() {
 
     const params: UserQueryParams = useMemo(() => {
         const p: UserQueryParams = {
-            excludeRoles: "LEADER,INTERN",
+            portalType: "ADMIN",
         };
 
         const fullName = searchParams.get("fullName");
+        const roleName = searchParams.get("roleName");
         const isActive = searchParams.get("isActive");
         const page = searchParams.get("page");
         const limit = searchParams.get("limit");
 
         if (fullName) p.fullName = fullName;
+        if (roleName) p.roleName = roleName;
         if (isActive) p.isActive = isActive === "true";
         if (page) p.page = Number(page);
         if (limit) p.limit = Number(limit);
@@ -93,6 +95,7 @@ export default function AdminTeamTable() {
             >
                 <Table.Header>
                     <div>{t("admin.adminTeam.colAdmin")}</div>
+                    <div>{t("admin.adminTeam.colRole")}</div>
                     <div>{t("admin.adminTeam.colStatus")}</div>
                     <div>{t("admin.adminTeam.colJoined")}</div>
                     <Table.ReloadButton onReload={refetch} isReloading={isFetching} />
