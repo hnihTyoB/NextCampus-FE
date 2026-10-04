@@ -19,11 +19,20 @@ import Modal from "@/components/ui/Modal";
 import InlineSelect from "@/components/ui/InlineSelect";
 import { useRBAC } from "@/hooks/rbac/useRBAC";
 
-type InternRowProps = {
-    intern: Intern;
+export type InternDraft = {
+    leaderId?: string | null;
+    departmentId?: string | null;
+    positionId?: string | null;
+    status?: Intern["status"];
 };
 
-export default function InternRow({ intern }: InternRowProps) {
+type InternRowProps = {
+    intern: Intern;
+    draft?: InternDraft;
+    onDraftChange?: (patch: Partial<InternDraft>) => void;
+};
+
+export default function InternRow({ intern, draft, onDraftChange }: InternRowProps) {
     const t = useTranslations();
     const locale = useLocale();
     const router = useRouter();
@@ -44,15 +53,20 @@ export default function InternRow({ intern }: InternRowProps) {
     >(null);
     const leaders = useMemo(() => leadersData?.data ?? [], [leadersData?.data]);
 
+    const currentLeaderId = draft?.leaderId !== undefined ? draft.leaderId : intern.leaderId;
+    const currentDepartmentId = draft?.departmentId !== undefined ? draft.departmentId : (intern.department?.id ?? null);
+    const currentPositionId = draft?.positionId !== undefined ? draft.positionId : (intern.position?.id ?? null);
+    const currentStatus = draft?.status !== undefined ? draft.status : intern.status;
+
     const selectedLeader = useMemo(() => {
-        return intern.leaderId ? leaders.find((l) => l.userId === intern.leaderId) : null;
-    }, [intern.leaderId, leaders]);
+        return currentLeaderId ? leaders.find((l) => l.userId === currentLeaderId) : null;
+    }, [currentLeaderId, leaders]);
 
     const allowedDepartments = useMemo(() => {
         return selectedLeader ? selectedLeader.departments : [];
     }, [selectedLeader]);
 
-    const { data: posData } = usePositions(intern.department?.id ?? undefined);
+    const { data: posData } = usePositions(currentDepartmentId ?? undefined);
     const positions = posData?.data ?? [];
 
     // Standardized 3-Dots Portal Action Menu (Rule 76-82 of AGENTS.md)
@@ -165,12 +179,22 @@ export default function InternRow({ intern }: InternRowProps) {
 
     const handleLeaderChange = useCallback(
         (newLeaderId: string | null) => {
-            setUpdatingField("leader");
             const selectedLdr = newLeaderId
                 ? leaders.find((l) => l.userId === newLeaderId)
                 : null;
             const hasSingleDepartment = selectedLdr?.departments?.length === 1;
+            const newDeptId = hasSingleDepartment ? selectedLdr.departments[0].id : null;
 
+            if (onDraftChange) {
+                onDraftChange({
+                    leaderId: newLeaderId,
+                    departmentId: newDeptId,
+                    positionId: null,
+                });
+                return;
+            }
+
+            setUpdatingField("leader");
             updateIntern(
                 {
                     id: intern.id,
@@ -187,11 +211,15 @@ export default function InternRow({ intern }: InternRowProps) {
                 { onSettled: () => setUpdatingField(null) },
             );
         },
-        [intern.id, leaders, updateIntern],
+        [intern.id, leaders, updateIntern, onDraftChange],
     );
 
     const handlePositionChange = useCallback(
         (newPositionId: string | null) => {
+            if (onDraftChange) {
+                onDraftChange({ positionId: newPositionId });
+                return;
+            }
             setUpdatingField("position");
             updateIntern(
                 {
@@ -201,11 +229,18 @@ export default function InternRow({ intern }: InternRowProps) {
                 { onSettled: () => setUpdatingField(null) },
             );
         },
-        [intern.id, updateIntern],
+        [intern.id, updateIntern, onDraftChange],
     );
 
     const handleDepartmentChange = useCallback(
         (newDepartmentId: string | null) => {
+            if (onDraftChange) {
+                onDraftChange({
+                    departmentId: newDepartmentId,
+                    positionId: null,
+                });
+                return;
+            }
             setUpdatingField("department");
             updateIntern(
                 {
@@ -218,11 +253,15 @@ export default function InternRow({ intern }: InternRowProps) {
                 { onSettled: () => setUpdatingField(null) },
             );
         },
-        [intern.id, updateIntern],
+        [intern.id, updateIntern, onDraftChange],
     );
 
     const handleStatusChange = useCallback(
         (newStatus: Intern["status"]) => {
+            if (onDraftChange) {
+                onDraftChange({ status: newStatus });
+                return;
+            }
             setUpdatingField("status");
             updateIntern(
                 {
@@ -232,8 +271,13 @@ export default function InternRow({ intern }: InternRowProps) {
                 { onSettled: () => setUpdatingField(null) },
             );
         },
-        [intern.id, updateIntern],
+        [intern.id, updateIntern, onDraftChange],
     );
+
+    const isLeaderDirty = draft?.leaderId !== undefined && draft.leaderId !== intern.leaderId;
+    const isDeptDirty = draft?.departmentId !== undefined && draft.departmentId !== (intern.department?.id ?? null);
+    const isPosDirty = draft?.positionId !== undefined && draft.positionId !== (intern.position?.id ?? null);
+    const isStatusDirty = draft?.status !== undefined && draft.status !== intern.status;
 
     const handleRemindDiscord = useCallback(async () => {
         setMenuOpen(false);
@@ -275,12 +319,26 @@ export default function InternRow({ intern }: InternRowProps) {
                     {canAssignLeader ? (
                         <InlineSelect
                             ariaLabel="Leader"
-                            value={intern.leaderId}
+                            value={currentLeaderId}
+                            fallbackLabel={
+                                selectedLeader?.user?.fullName ??
+                                selectedLeader?.user?.email ??
+                                intern.leader?.fullName ??
+                                intern.leader?.email ??
+                                undefined
+                            }
                             placeholder={t("admin.interns.notSet")}
                             loading={updatingField === "leader"}
+                            isDirty={isLeaderDirty}
                             onChange={handleLeaderChange}
                             options={[
                                 { value: null, label: t("admin.interns.notSet") },
+                                ...(intern.leader && intern.leaderId && !leaders.some((l) => l.userId === intern.leaderId)
+                                    ? [{
+                                        value: intern.leaderId,
+                                        label: intern.leader.fullName ? `${intern.leader.fullName} (${intern.leader.email})` : intern.leader.email,
+                                    }]
+                                    : []),
                                 ...leaders.map((l) => ({
                                     value: l.userId,
                                     label: l.user.fullName ? `${l.user.fullName} (${l.user.email})` : l.user.email,
@@ -289,7 +347,7 @@ export default function InternRow({ intern }: InternRowProps) {
                         />
                     ) : (
                         <span className="truncate font-medium text-foreground">
-                            {selectedLeader?.user?.fullName ?? selectedLeader?.user?.email ?? t("admin.interns.notSet")}
+                            {selectedLeader?.user?.fullName ?? selectedLeader?.user?.email ?? intern.leader?.fullName ?? intern.leader?.email ?? t("admin.interns.notSet")}
                         </span>
                     )}
                 </div>
@@ -299,14 +357,23 @@ export default function InternRow({ intern }: InternRowProps) {
                     {canUpdateIntern ? (
                         <InlineSelect
                             ariaLabel="Department"
-                            value={intern.department?.id ?? null}
+                            value={currentDepartmentId}
+                            fallbackLabel={
+                                allowedDepartments.find((d) => d.id === currentDepartmentId)?.name ??
+                                intern.department?.name ??
+                                undefined
+                            }
                             placeholder={t("admin.interns.notSet")}
                             loading={updatingField === "department"}
-                            disabled={!intern.leaderId}
+                            disabled={!currentLeaderId}
+                            isDirty={isDeptDirty}
                             onDisabledClick={() => toast.error(t("admin.interns.selectLeaderFirst"))}
                             onChange={handleDepartmentChange}
                             options={[
                                 { value: null, label: t("admin.interns.notSet") },
+                                ...(intern.department && !allowedDepartments.some((d) => d.id === intern.department?.id)
+                                    ? [{ value: intern.department.id, label: intern.department.name }]
+                                    : []),
                                 ...allowedDepartments.map((d) => ({
                                     value: d.id,
                                     label: d.name,
@@ -325,14 +392,23 @@ export default function InternRow({ intern }: InternRowProps) {
                     {canUpdateIntern ? (
                         <InlineSelect
                             ariaLabel="Position"
-                            value={intern.position?.id ?? null}
+                            value={currentPositionId}
+                            fallbackLabel={
+                                positions.find((p) => p.id === currentPositionId)?.name ??
+                                intern.position?.name ??
+                                undefined
+                            }
                             placeholder={t("admin.interns.notSet")}
                             loading={updatingField === "position"}
-                            disabled={!intern.department?.id}
+                            disabled={!currentDepartmentId}
+                            isDirty={isPosDirty}
                             onDisabledClick={() => toast.error(t("admin.interns.departmentRequired"))}
                             onChange={handlePositionChange}
                             options={[
                                 { value: null, label: t("admin.interns.notSet") },
+                                ...(intern.position && !positions.some((p) => p.id === intern.position?.id)
+                                    ? [{ value: intern.position.id, label: intern.position.name }]
+                                    : []),
                                 ...positions.map((p) => ({
                                     value: p.id,
                                     label: p.name,
@@ -357,9 +433,10 @@ export default function InternRow({ intern }: InternRowProps) {
                     {canUpdateIntern ? (
                         <InlineSelect
                             ariaLabel="Status"
-                            value={intern.status}
+                            value={currentStatus}
                             placeholder={t("admin.interns.colStatus")}
                             loading={updatingField === "status"}
+                            isDirty={isStatusDirty}
                             onChange={(val) => handleStatusChange(val as Intern["status"])}
                             options={[
                                 { value: "ACTIVE", label: t("admin.interns.active") },
@@ -369,7 +446,7 @@ export default function InternRow({ intern }: InternRowProps) {
                             renderTrigger={(label) => (
                                 <span
                                     className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition ${
-                                        statusBadge[intern.status] ?? ""
+                                        statusBadge[currentStatus] ?? ""
                                     }`}
                                 >
                                     <Circle className="h-2 w-2 fill-current" />
@@ -380,13 +457,13 @@ export default function InternRow({ intern }: InternRowProps) {
                     ) : (
                         <span
                             className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium ${
-                                statusBadge[intern.status] ?? ""
+                                statusBadge[currentStatus] ?? ""
                             }`}
                         >
                             <Circle className="h-2 w-2 fill-current" />
-                            {intern.status === "ACTIVE"
+                            {currentStatus === "ACTIVE"
                                 ? t("admin.interns.active")
-                                : intern.status === "COMPLETED"
+                                : currentStatus === "COMPLETED"
                                   ? t("admin.interns.completed")
                                   : t("admin.interns.dropped")}
                         </span>

@@ -192,3 +192,16 @@ export interface GetApplicationInvitesParams {
   page?: number;
   limit?: number;
 }
+
+export interface BatchAssignApplicationItem {
+  id: string;
+  departmentId: string | null;
+  positionId: string | null;
+}
+
+export interface BatchAssignApplicationsResponse {
+  success: boolean;
+  message: string;
+  data: Application[];
+}
+

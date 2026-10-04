@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { useSearchParams, usePathname, useRouter } from "next/navigation";
 import {
   AlertTriangle,
@@ -12,13 +12,17 @@ import {
   Loader2,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { toast } from "react-hot-toast";
 import { useDepartments } from "@/hooks/department/useDepartments";
 import { useDeleteDepartment } from "@/hooks/department/useDeleteDepartment";
 import { useLeaders } from "@/hooks/leader/useLeaders";
+import { useBatchUpdateLeaders } from "@/hooks/leader/useBatchUpdateLeaders";
+import { MAX_LEADER_DEPARTMENTS, type Leader } from "@/types/leader";
 import Table from "@/components/ui/Table";
 import Modal from "@/components/ui/Modal";
 import MetalCard from "@/components/ui/MetalCard";
 import Spinner from "@/components/ui/Spinner";
+import BatchSaveBar from "@/components/ui/BatchSaveBar";
 import type { Department } from "@/types/department";
 import DepartmentRow from "./DepartmentRow";
 import EditDepartmentModal from "./EditDepartmentModal";
@@ -67,6 +71,107 @@ export default function DepartmentTable() {
 
   const departments = data?.data ?? [];
   const leaders = leadersData?.data ?? [];
+
+  const [draftLeaderDepts, setDraftLeaderDepts] = useState<Record<string, string[]>>({});
+  const { mutateAsync: batchUpdateLeaders, isPending: isSaving } = useBatchUpdateLeaders();
+
+  const handleToggleLeaderForDept = (dept: Department, leader: Leader) => {
+    const currentDeptIds =
+      draftLeaderDepts[leader.id] ?? leader.departments.map((d) => d.id);
+    const isAssigned = currentDeptIds.includes(dept.id);
+
+    if (!isAssigned && currentDeptIds.length >= MAX_LEADER_DEPARTMENTS) {
+      toast.error(
+        t("admin.department.maxDepartmentsToast", { n: MAX_LEADER_DEPARTMENTS })
+      );
+      return;
+    }
+
+    const nextDeptIds = isAssigned
+      ? currentDeptIds.filter((id) => id !== dept.id)
+      : [...currentDeptIds, dept.id];
+
+    setDraftLeaderDepts((prev) => ({
+      ...prev,
+      [leader.id]: nextDeptIds,
+    }));
+  };
+
+  const deptAssignedLeaderIds = useMemo(() => {
+    const map: Record<string, Set<string>> = {};
+    for (const dept of departments) {
+      if (Object.keys(draftLeaderDepts).length === 0) {
+        map[dept.id] = new Set((dept.leaders ?? []).map((l) => l.id));
+        continue;
+      }
+      const set = new Set<string>();
+      for (const l of dept.leaders ?? []) {
+        if (draftLeaderDepts[l.id] === undefined) {
+          set.add(l.id);
+        }
+      }
+      for (const leader of leaders) {
+        const leaderDeptIds =
+          draftLeaderDepts[leader.id] ?? leader.departments.map((d) => d.id);
+        if (leaderDeptIds.includes(dept.id)) {
+          set.add(leader.id);
+        } else {
+          set.delete(leader.id);
+        }
+      }
+      map[dept.id] = set;
+    }
+    return map;
+  }, [departments, leaders, draftLeaderDepts]);
+
+  const isDeptDirty = (dept: Department): boolean => {
+    const initialLeaderIds = new Set((dept.leaders ?? []).map((l) => l.id));
+    const currentLeaderIds = deptAssignedLeaderIds[dept.id] ?? new Set();
+    if (initialLeaderIds.size !== currentLeaderIds.size) return true;
+    for (const id of currentLeaderIds) {
+      if (!initialLeaderIds.has(id)) return true;
+    }
+    return false;
+  };
+
+  const dirtyLeaders = useMemo(() => {
+    const list: Array<{ leader: Leader; departmentIds: string[] }> = [];
+    for (const leader of leaders) {
+      const draftIds = draftLeaderDepts[leader.id];
+      if (!draftIds) continue;
+      const initialIds = leader.departments.map((d) => d.id).sort();
+      const sortedDraftIds = [...draftIds].sort();
+      const isDifferent =
+        initialIds.length !== sortedDraftIds.length ||
+        initialIds.some((id, idx) => id !== sortedDraftIds[idx]);
+      if (isDifferent) {
+        list.push({ leader, departmentIds: draftIds });
+      }
+    }
+    return list;
+  }, [leaders, draftLeaderDepts]);
+
+  const dirtyCount = dirtyLeaders.length;
+
+  async function handleBatchSave() {
+    if (dirtyLeaders.length === 0) return;
+    try {
+      await batchUpdateLeaders(
+        dirtyLeaders.map((item) => ({
+          id: item.leader.id,
+          departmentIds: item.departmentIds,
+        })),
+      );
+      setDraftLeaderDepts({});
+      refetch();
+    } catch {
+      // Error handled by mutation hook
+    }
+  }
+
+  function handleDiscard() {
+    setDraftLeaderDepts({});
+  }
 
   const total = departments.length;
   const totalPages = Math.ceil(total / PAGE_SIZE);
@@ -171,6 +276,9 @@ export default function DepartmentTable() {
               leaders={leaders}
               leadersLoading={leadersPending}
               leadersError={leadersError}
+              assignedLeaderIds={Object.keys(draftLeaderDepts).length > 0 ? deptAssignedLeaderIds[dept.id] : undefined}
+              onLeaderToggle={(leader) => handleToggleLeaderForDept(dept, leader)}
+              isDirty={isDeptDirty(dept)}
               onOpenEdit={(d) => setEditingDepartment(d)}
               onOpenPositions={(d) => setPositionsDepartment(d)}
               onOpenDelete={(d) => setDeletingDepartment(d)}
@@ -275,6 +383,13 @@ export default function DepartmentTable() {
           </div>
         </Modal>
       )}
+
+      <BatchSaveBar
+        dirtyCount={dirtyCount}
+        isSaving={isSaving}
+        onSave={handleBatchSave}
+        onDiscard={handleDiscard}
+      />
     </>
   );
 }

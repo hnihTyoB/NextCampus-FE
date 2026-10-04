@@ -20,11 +20,19 @@ import InlineSelect from "@/components/ui/InlineSelect";
 import LeaderDepartmentSelect from "./LeaderDepartmentSelect";
 import { useRBAC } from "@/hooks/rbac/useRBAC";
 
-type LeaderRowProps = {
-    leader: Leader;
+export type LeaderDraft = {
+    departmentIds?: string[];
+    position?: string | null;
+    isActive?: boolean;
 };
 
-export default function LeaderRow({ leader }: LeaderRowProps) {
+type LeaderRowProps = {
+    leader: Leader;
+    draft?: LeaderDraft;
+    onDraftChange?: (patch: Partial<LeaderDraft>) => void;
+};
+
+export default function LeaderRow({ leader, draft, onDraftChange }: LeaderRowProps) {
     const t = useTranslations();
     const router = useRouter();
     const { can } = useRBAC();
@@ -38,9 +46,13 @@ export default function LeaderRow({ leader }: LeaderRowProps) {
     const { mutate: updateLeader } = useUpdateLeader();
     const { data: deptData } = useDepartments();
     const departments = deptData?.data ?? [];
-    const managedDepartmentIds = new Set(
-        leader.departments.map((department) => department.id),
-    );
+    
+    // Effective departments based on draft
+    const effectiveDepartmentIds = draft?.departmentIds !== undefined
+        ? draft.departmentIds
+        : leader.departments.map((department) => department.id);
+    const managedDepartmentIds = new Set(effectiveDepartmentIds);
+
     const availablePositions = departments
         .filter((department) => managedDepartmentIds.has(department.id))
         .flatMap((department) => department.positions)
@@ -144,6 +156,10 @@ export default function LeaderRow({ leader }: LeaderRowProps) {
 
     const handlePositionChange = useCallback(
         (newPos: string | null) => {
+            if (onDraftChange) {
+                onDraftChange({ position: newPos || null });
+                return;
+            }
             setUpdatingField("position");
             updateLeader(
                 {
@@ -153,7 +169,7 @@ export default function LeaderRow({ leader }: LeaderRowProps) {
                 { onSettled: () => setUpdatingField(null) },
             );
         },
-        [leader.id, updateLeader],
+        [leader.id, updateLeader, onDraftChange],
     );
 
     const queryClient = useQueryClient();
@@ -166,6 +182,24 @@ export default function LeaderRow({ leader }: LeaderRowProps) {
         },
         onError: () => toast.error(t("admin.leaders.statusUpdateError")),
     });
+
+    const handleStatusChange = useCallback(
+        (val: string | null) => {
+            if (val === null) return;
+            const newActive = val === "true";
+            if (onDraftChange) {
+                onDraftChange({ isActive: newActive });
+                return;
+            }
+            toggleActive(newActive);
+        },
+        [onDraftChange, toggleActive],
+    );
+
+    const currentPosition = draft?.position !== undefined ? draft.position : leader.position;
+    const isPositionDirty = draft?.position !== undefined && draft.position !== leader.position;
+    const currentActive = draft?.isActive !== undefined ? draft.isActive : leader.user.isActive;
+    const isStatusDirty = draft?.isActive !== undefined && draft.isActive !== leader.user.isActive;
 
     return (
         <Modal>
@@ -209,6 +243,8 @@ export default function LeaderRow({ leader }: LeaderRowProps) {
                         <LeaderDepartmentSelect
                             leader={leader}
                             departments={departments}
+                            draftDepartmentIds={draft?.departmentIds}
+                            onDraftChange={(deptIds) => onDraftChange?.({ departmentIds: deptIds, position: null })}
                         />
                     ) : (
                         <span className="truncate text-foreground font-medium" title={leader.departments.map((d) => d.name).join(", ") || "—"}>
@@ -222,14 +258,19 @@ export default function LeaderRow({ leader }: LeaderRowProps) {
                     {canUpdateLeader ? (
                         <InlineSelect
                             ariaLabel={t("admin.leaders.colPosition")}
-                            value={leader.position}
+                            value={currentPosition}
+                            fallbackLabel={currentPosition ?? undefined}
                             placeholder={t("admin.leaders.notSet")}
                             loading={updatingField === "position"}
-                            disabled={leader.departments.length === 0}
+                            disabled={managedDepartmentIds.size === 0}
+                            isDirty={isPositionDirty}
                             onDisabledClick={() => toast.error(t("admin.leaders.selectDepartmentFirst"))}
                             onChange={handlePositionChange}
                             options={[
                                 { value: null, label: t("admin.leaders.notSet") },
+                                ...(currentPosition && !availablePositions.some((pos) => pos.name === currentPosition)
+                                    ? [{ value: currentPosition, label: currentPosition }]
+                                    : []),
                                 ...availablePositions.map((pos) => ({
                                     value: pos.name,
                                     label: pos.name,
@@ -255,13 +296,12 @@ export default function LeaderRow({ leader }: LeaderRowProps) {
                     {canUpdateUser ? (
                         <InlineSelect
                             ariaLabel={t("admin.leaders.colStatus")}
-                            value={leader.user.isActive ? "true" : "false"}
+                            value={currentActive ? "true" : "false"}
                             placeholder={t("admin.leaders.colStatus")}
                             loading={togglingActive}
                             disabled={togglingActive}
-                            onChange={(val) => {
-                                if (val !== null) toggleActive(val === "true");
-                            }}
+                            isDirty={isStatusDirty}
+                            onChange={handleStatusChange}
                             options={[
                                 { value: "true", label: t("admin.leaders.active") },
                                 { value: "false", label: t("admin.leaders.inactive") },
@@ -269,14 +309,14 @@ export default function LeaderRow({ leader }: LeaderRowProps) {
                             renderTrigger={(label) => (
                                 <span
                                     className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors ${
-                                        leader.user.isActive
+                                        currentActive
                                             ? "border-emerald-300 bg-emerald-100/80 text-emerald-700 hover:border-emerald-400 dark:border-emerald-400/30 dark:bg-emerald-500/10 dark:text-emerald-300 dark:hover:border-emerald-400/50"
                                             : "border-rose-300 bg-rose-100/80 text-rose-700 hover:border-rose-400 dark:border-red-400/30 dark:bg-red-500/10 dark:text-red-300 dark:hover:border-red-400/50"
                                     }`}
                                 >
                                     <span
                                         className={`h-1.5 w-1.5 rounded-full ${
-                                            leader.user.isActive
+                                            currentActive
                                                 ? "bg-emerald-500 dark:bg-emerald-400"
                                                 : "bg-rose-500 dark:bg-red-400"
                                         }`}

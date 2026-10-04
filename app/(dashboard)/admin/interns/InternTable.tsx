@@ -1,18 +1,20 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight, AlertTriangle, Users, RotateCcw, UserPlus } from "lucide-react";
 import { useSearchParams, usePathname, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 
 import { useInterns } from "@/hooks/intern/useInterns";
-import type { InternQueryParams } from "@/types/intern";
+import { useBatchUpdateInterns } from "@/hooks/intern/useBatchUpdateInterns";
+import type { InternQueryParams, BatchUpdateInternItem } from "@/types/intern";
 
 import Table from "@/components/ui/Table";
 import Modal from "@/components/ui/Modal";
 import MetalCard from "@/components/ui/MetalCard";
 import Spinner from "@/components/ui/Spinner";
-import InternRow from "./InternRow";
+import BatchSaveBar from "@/components/ui/BatchSaveBar";
+import InternRow, { type InternDraft } from "./InternRow";
 
 const COLUMNS =
     "minmax(180px,1.3fr) minmax(150px,1.1fr) minmax(120px,0.9fr) minmax(90px,0.6fr) 130px 135px 145px 48px";
@@ -22,6 +24,9 @@ export default function InternTable() {
     const searchParams = useSearchParams();
     const pathname = usePathname();
     const router = useRouter();
+
+    const [drafts, setDrafts] = useState<Record<string, InternDraft>>({});
+    const { mutateAsync: batchUpdateInterns, isPending: isSaving } = useBatchUpdateInterns();
 
     const params: InternQueryParams = useMemo(() => {
         const p: InternQueryParams = {};
@@ -77,6 +82,50 @@ export default function InternTable() {
         p.set("page", "1");
         router.push(`${pathname}?${p.toString()}`);
     }
+
+    const dirtyInterns = useMemo(() => {
+        const dirtyMap = new Map<string, InternDraft>();
+        for (const [internId, draft] of Object.entries(drafts)) {
+            const original = interns.find((i) => i.id === internId);
+            if (!original) continue;
+
+            const leaderChanged = draft.leaderId !== undefined && draft.leaderId !== original.leaderId;
+            const deptChanged = draft.departmentId !== undefined && draft.departmentId !== (original.department?.id ?? null);
+            const posChanged = draft.positionId !== undefined && draft.positionId !== (original.position?.id ?? null);
+            const statusChanged = draft.status !== undefined && draft.status !== original.status;
+
+            if (leaderChanged || deptChanged || posChanged || statusChanged) {
+                dirtyMap.set(internId, draft);
+            }
+        }
+        return dirtyMap;
+    }, [drafts, interns]);
+
+    const dirtyCount = dirtyInterns.size;
+
+    const handleBatchSave = async () => {
+        try {
+            const items: BatchUpdateInternItem[] = [];
+            for (const [internId, draft] of dirtyInterns.entries()) {
+                const original = interns.find((i) => i.id === internId);
+                if (!original) continue;
+
+                items.push({
+                    id: internId,
+                    leaderId: draft.leaderId !== undefined ? draft.leaderId : original.leaderId,
+                    departmentId: draft.departmentId !== undefined ? draft.departmentId : (original.department?.id ?? null),
+                    positionId: draft.positionId !== undefined ? draft.positionId : (original.position?.id ?? null),
+                    status: draft.status !== undefined ? draft.status : original.status,
+                });
+            }
+
+            await batchUpdateInterns(items);
+            setDrafts({});
+            refetch();
+        } catch {
+            // Error handled by mutation hook
+        }
+    };
 
     if (isPending) {
         return (
@@ -157,7 +206,20 @@ export default function InternTable() {
                 <Table.Body
                     data={interns}
                     render={(intern) => (
-                        <InternRow key={intern.id} intern={intern} />
+                        <InternRow
+                            key={intern.id}
+                            intern={intern}
+                            draft={drafts[intern.id]}
+                            onDraftChange={(patch) =>
+                                setDrafts((prev) => ({
+                                    ...prev,
+                                    [intern.id]: {
+                                        ...prev[intern.id],
+                                        ...patch,
+                                    },
+                                }))
+                            }
+                        />
                     )}
                 />
 
@@ -193,6 +255,13 @@ export default function InternTable() {
                     </Table.Footer>
                 )}
             </Table>
+
+            <BatchSaveBar
+                count={dirtyCount}
+                isSaving={isSaving}
+                onSave={handleBatchSave}
+                onDiscard={() => setDrafts({})}
+            />
         </Modal>
     );
 }

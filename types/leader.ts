@@ -11,6 +11,11 @@ export interface LeaderUser {
     fullName: string | null;
     isActive: boolean;
     avatarUrl: string | null;
+    role?: {
+        id: string;
+        name: string;
+        portalType: string;
+    } | null;
 }
 
 export interface Leader {
@@ -75,3 +80,18 @@ export interface UpdateLeaderPayload {
 export interface UpdateMeLeaderPayload {
     phone?: string | null;
 }
+
+export interface BatchUpdateLeaderItem {
+    id: string;
+    departmentIds?: string[];
+    position?: string | null;
+    phone?: string;
+    isActive?: boolean;
+}
+
+export interface BatchUpdateLeadersResponse {
+    success: boolean;
+    message: string;
+    data: Leader[];
+}
+

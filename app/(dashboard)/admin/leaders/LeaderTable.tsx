@@ -1,18 +1,20 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight, AlertTriangle, Users, UserPlus, RotateCcw } from "lucide-react";
 import { useSearchParams, usePathname, useRouter } from "next/navigation";
 
 import { useLeaders } from "@/hooks/leader/useLeaders";
-import type { LeaderQueryParams } from "@/types/leader";
+import { useBatchUpdateLeaders } from "@/hooks/leader/useBatchUpdateLeaders";
+import type { LeaderQueryParams, BatchUpdateLeaderItem } from "@/types/leader";
 
 import Table from "@/components/ui/Table";
 import Modal from "@/components/ui/Modal";
 import MetalCard from "@/components/ui/MetalCard";
 import Spinner from "@/components/ui/Spinner";
-import LeaderRow from "./LeaderRow";
+import BatchSaveBar from "@/components/ui/BatchSaveBar";
+import LeaderRow, { type LeaderDraft } from "./LeaderRow";
 
 const COLUMNS =
     "minmax(220px,2fr) minmax(190px,1.8fr) minmax(160px,1.4fr) 80px 160px 48px";
@@ -22,6 +24,9 @@ export default function LeaderTable() {
     const searchParams = useSearchParams();
     const pathname = usePathname();
     const router = useRouter();
+
+    const [drafts, setDrafts] = useState<Record<string, LeaderDraft>>({});
+    const { mutateAsync: batchUpdateLeaders, isPending: isSaving } = useBatchUpdateLeaders();
 
     const params: LeaderQueryParams = useMemo(() => {
         const p: LeaderQueryParams = {};
@@ -74,6 +79,51 @@ export default function LeaderTable() {
         p.set("page", "1");
         router.push(`${pathname}?${p.toString()}`);
     }
+
+    const dirtyLeaders = useMemo(() => {
+        const dirtyMap = new Map<string, LeaderDraft>();
+        for (const [leaderId, draft] of Object.entries(drafts)) {
+            const original = leaders.find((l) => l.id === leaderId);
+            if (!original) continue;
+
+            const deptChanged = draft.departmentIds !== undefined && (
+                draft.departmentIds.length !== original.departments.length ||
+                draft.departmentIds.some((id) => !original.departments.some((d) => d.id === id))
+            );
+            const posChanged = draft.position !== undefined && draft.position !== original.position;
+            const statusChanged = draft.isActive !== undefined && draft.isActive !== original.user.isActive;
+
+            if (deptChanged || posChanged || statusChanged) {
+                dirtyMap.set(leaderId, draft);
+            }
+        }
+        return dirtyMap;
+    }, [drafts, leaders]);
+
+    const dirtyCount = dirtyLeaders.size;
+
+    const handleBatchSave = async () => {
+        try {
+            const items: BatchUpdateLeaderItem[] = [];
+            for (const [leaderId, draft] of dirtyLeaders.entries()) {
+                const original = leaders.find((l) => l.id === leaderId);
+                if (!original) continue;
+
+                items.push({
+                    id: leaderId,
+                    departmentIds: draft.departmentIds !== undefined ? draft.departmentIds : original.departments.map((d) => d.id),
+                    position: draft.position !== undefined ? draft.position : original.position,
+                    isActive: draft.isActive !== undefined ? draft.isActive : original.user.isActive,
+                });
+            }
+
+            await batchUpdateLeaders(items);
+            setDrafts({});
+            refetch();
+        } catch {
+            // Error handled by mutation hook
+        }
+    };
 
     if (isPending) {
         return (
@@ -152,7 +202,20 @@ export default function LeaderTable() {
                 <Table.Body
                     data={leaders}
                     render={(leader) => (
-                        <LeaderRow key={leader.id} leader={leader} />
+                        <LeaderRow
+                            key={leader.id}
+                            leader={leader}
+                            draft={drafts[leader.id]}
+                            onDraftChange={(patch) =>
+                                setDrafts((prev) => ({
+                                    ...prev,
+                                    [leader.id]: {
+                                        ...prev[leader.id],
+                                        ...patch,
+                                    },
+                                }))
+                            }
+                        />
                     )}
                 />
 
@@ -188,6 +251,13 @@ export default function LeaderTable() {
                     </Table.Footer>
                 )}
             </Table>
+
+            <BatchSaveBar
+                count={dirtyCount}
+                isSaving={isSaving}
+                onSave={handleBatchSave}
+                onDiscard={() => setDrafts({})}
+            />
         </Modal>
     );
 }

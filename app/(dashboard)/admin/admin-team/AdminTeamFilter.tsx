@@ -6,12 +6,24 @@ import { useTranslations } from "next-intl";
 
 import FilterSelect from "@/components/ui/FilterSelect";
 import MetalCard from "@/components/ui/MetalCard";
+import { useRoles } from "@/hooks/rbac/useRoles";
 
 export default function AdminTeamFilter() {
     const t = useTranslations();
     const searchParams = useSearchParams();
     const pathname = usePathname();
     const router = useRouter();
+
+    const { data: rolesData } = useRoles();
+    const adminRoles = useMemo(() => {
+        const roles = rolesData?.data ?? [];
+        return roles
+            .filter((r) => r.portalType === "ADMIN")
+            .map((r) => ({
+                value: r.name,
+                label: r.name,
+            }));
+    }, [rolesData?.data]);
 
     const statusOptions = useMemo(
         () => [
@@ -34,7 +46,7 @@ export default function AdminTeamFilter() {
 
     return (
         <MetalCard className="px-6 py-5">
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                 <div className="flex flex-col gap-3">
                     <label className="metal-text metal-glow text-sm font-semibold uppercase tracking-[0.18em]">
                         {t("admin.adminTeam.search")}
@@ -51,6 +63,13 @@ export default function AdminTeamFilter() {
                         />
                     </div>
                 </div>
+
+                <FilterSelect
+                    label={t("admin.adminTeam.filterRole")}
+                    filterField="roleName"
+                    options={adminRoles}
+                    placeholder={t("admin.adminTeam.allRoles")}
+                />
 
                 <FilterSelect
                     label={t("admin.adminTeam.filterStatus")}

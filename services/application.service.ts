@@ -12,6 +12,8 @@ import {
   ApplicationInviteListResponse,
   GetApplicationInvitesParams,
   ApplicationInviteRow,
+  BatchAssignApplicationItem,
+  BatchAssignApplicationsResponse,
 } from "@/types/application";
 import { MessageSuccessResponse } from "@/types/auth";
 
@@ -129,6 +131,16 @@ export const assignApplicationService = async (
   const response = await api.patch<ApplicationSuccessResponse>(
     `/applications/${id}/assignment`,
     payload,
+  );
+  return response.data;
+};
+
+export const batchAssignApplicationsService = async (
+  items: BatchAssignApplicationItem[],
+): Promise<BatchAssignApplicationsResponse> => {
+  const response = await api.post<BatchAssignApplicationsResponse>(
+    "/applications/batch-assign",
+    { items },
   );
   return response.data;
 };

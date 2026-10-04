@@ -3,6 +3,11 @@ export interface InternUser {
     email: string;
     fullName: string | null;
     isActive: boolean;
+    role?: {
+        id: string;
+        name: string;
+        portalType: string;
+    } | null;
 }
 
 export interface Intern {
@@ -115,3 +120,22 @@ export interface UpdateMeInternPayload {
     university?: string | null;
     major?: string | null;
 }
+
+export interface BatchUpdateInternItem {
+    id: string;
+    leaderId?: string | null;
+    departmentId?: string | null;
+    positionId?: string | null;
+    status?: "ACTIVE" | "COMPLETED" | "DROPPED";
+    startDate?: string;
+    duration?: number;
+    discordUsername?: string | null;
+    discordRoleGranted?: boolean;
+}
+
+export interface BatchUpdateInternsResponse {
+    success: boolean;
+    message: string;
+    data: Intern[];
+}
+

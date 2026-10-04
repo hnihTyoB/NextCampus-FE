@@ -80,7 +80,7 @@
         "title": "Chỉnh Sửa Vai Trò",
         "description": "Cập nhật thông tin mô tả, phân hệ mặc định hoặc tên hiển thị của vai trò.",
         "nameLabel": "Tên vai trò",
-        "systemRoleNotice": "Vai trò hệ thống (Cố định tên & phân hệ)",
+        "systemRoleNotice": "Vai trò hệ thống (Cố định tên vai trò)",
         "nameRequired": "Vui lòng nhập tên vai trò",
         "nameMinLength": "Tên vai trò tối thiểu 2 ký tự",
         "portalTypeLabel": "Phân hệ mặc định (Portal Type)",

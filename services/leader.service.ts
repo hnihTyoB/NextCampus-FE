@@ -6,6 +6,8 @@ import type {
     CreateLeaderPayload,
     UpdateLeaderPayload,
     UpdateMeLeaderPayload,
+    BatchUpdateLeaderItem,
+    BatchUpdateLeadersResponse,
 } from "@/types/leader";
 import type { MessageSuccessResponse } from "@/types/auth";
 
@@ -58,6 +60,16 @@ export const leaderService = {
         const response = await api.put<LeaderSuccessResponse>(
             `/leaders/${id}`,
             payload,
+        );
+        return response.data;
+    },
+
+    batchUpdateLeaders: async (
+        items: BatchUpdateLeaderItem[],
+    ): Promise<BatchUpdateLeadersResponse> => {
+        const response = await api.post<BatchUpdateLeadersResponse>(
+            "/leaders/batch-update",
+            { items },
         );
         return response.data;
     },

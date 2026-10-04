@@ -15,6 +15,9 @@ type DepartmentLeaderSelectProps = {
   leaders: Leader[];
   loading: boolean;
   error: boolean;
+  assignedLeaderIds?: Set<string>;
+  onLeaderToggle?: (leader: Leader) => void;
+  isDirty?: boolean;
 };
 
 export default function DepartmentLeaderSelect({
@@ -22,6 +25,9 @@ export default function DepartmentLeaderSelect({
   leaders,
   loading,
   error,
+  assignedLeaderIds: propAssignedLeaderIds,
+  onLeaderToggle,
+  isDirty,
 }: DepartmentLeaderSelectProps) {
   const t = useTranslations();
   const { can } = useRBAC();
@@ -37,8 +43,24 @@ export default function DepartmentLeaderSelect({
 
   const { mutate: updateLeader } = useUpdateLeader();
 
-  const assignedLeaders = department.leaders ?? [];
-  const assignedLeaderIds = new Set(assignedLeaders.map((leader) => leader.id));
+  const assignedLeaders = (() => {
+    if (!propAssignedLeaderIds) return department.leaders ?? [];
+    const list: Array<{ id: string; user: { fullName: string | null; email: string } }> = [];
+    for (const id of propAssignedLeaderIds) {
+      const fromLeaders = leaders.find((l) => l.id === id);
+      if (fromLeaders) {
+        list.push({ id: fromLeaders.id, user: fromLeaders.user });
+      } else {
+        const fromDept = (department.leaders ?? []).find((l) => l.id === id);
+        if (fromDept) {
+          list.push(fromDept);
+        }
+      }
+    }
+    return list;
+  })();
+  const assignedLeaderIds =
+    propAssignedLeaderIds ?? new Set(assignedLeaders.map((leader) => leader.id));
 
   const updatePosition = useCallback(() => {
     if (!triggerRef.current) return;
@@ -120,6 +142,11 @@ export default function DepartmentLeaderSelect({
   }, [open]);
 
   const handleLeaderToggle = (leader: Leader) => {
+    if (onLeaderToggle) {
+      onLeaderToggle(leader);
+      return;
+    }
+
     const isAssigned = assignedLeaderIds.has(leader.id);
     const currentDepartmentIds = leader.departments.map((item) => item.id);
 
@@ -209,15 +236,23 @@ export default function DepartmentLeaderSelect({
           <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin text-cyan-400" />
         ) : (
           <>
-            <span
-              className={`min-w-0 truncate text-xs sm:text-sm ${
-                assignedLeaders.length === 0
-                  ? "italic text-muted"
-                  : "font-medium text-foreground"
-              }`}
-              title={triggerLabel}
-            >
-              {triggerLabel}
+            <span className="flex items-center gap-1.5 min-w-0">
+              {isDirty && (
+                <span
+                  className="inline-block h-2 w-2 rounded-full bg-amber-400 ring-2 ring-amber-400/20 animate-pulse shrink-0"
+                  title={t("batchSave.helperText")}
+                />
+              )}
+              <span
+                className={`min-w-0 truncate text-xs sm:text-sm ${
+                  assignedLeaders.length === 0
+                    ? "italic text-muted"
+                    : "font-medium text-foreground"
+                }`}
+                title={triggerLabel}
+              >
+                {triggerLabel}
+              </span>
             </span>
             <ChevronDown
               className={`h-3.5 w-3.5 shrink-0 text-muted transition-transform duration-200 ${
@@ -271,7 +306,7 @@ export default function DepartmentLeaderSelect({
             </div>
 
             {/* Leader options */}
-            <div className="overflow-y-auto space-y-1 custom-scrollbar pr-1 flex-1">
+            <div className="overflow-y-auto space-y-1 scrollbar-dropdown pr-1 flex-1">
               {filteredLeaders.length === 0 ? (
                 <p className="px-3 py-3 text-xs italic text-muted text-center">
                   {t("admin.department.noLeadersAvailable")}

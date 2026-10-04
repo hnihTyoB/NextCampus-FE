@@ -1,24 +1,19 @@
 "use client";
 
-import { useForm, Controller } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import { UserPlus, Mail, Loader2 } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "react-hot-toast";
 import { useTranslations } from "next-intl";
-import { useMemo, useEffect } from "react";
 
 import { createUserService } from "@/services/user.service";
 import MetalCard from "@/components/ui/MetalCard";
 import Button from "@/components/ui/Button";
 import Modal from "@/components/ui/Modal";
-import Select from "@/components/ui/Select";
-
-import { useRoles } from "@/hooks/rbac/useRoles";
 import { useRBAC } from "@/hooks/rbac/useRBAC";
 
 type FormValues = {
     email: string;
-    roleId?: string;
 };
 
 export default function AdminTeamHeader() {
@@ -27,8 +22,8 @@ export default function AdminTeamHeader() {
     const { can } = useRBAC();
 
     const { mutate: createAdmin, isPending } = useMutation({
-        mutationFn: ({ email, roleId }: { email: string; roleId?: string }) =>
-            createUserService({ email, roleId, roleName: !roleId ? "ADMIN" : undefined }),
+        mutationFn: ({ email }: FormValues) =>
+            createUserService({ email, roleName: "ADMIN" }),
         onSuccess: () => {
             toast.success(t("admin.adminTeam.createSuccess"));
             queryClient.invalidateQueries({ queryKey: ["users"] });
@@ -55,7 +50,7 @@ export default function AdminTeamHeader() {
                         {can("USER_CREATE") && (
                             <div className="flex items-center gap-3">
                                 <Modal.Open opens="invite-admin">
-                                    <button className="flex items-center gap-2 rounded-xl border border-cyan-400/30 bg-cyan-500/10 px-4 py-2.5 text-sm font-medium text-cyan-300 transition hover:border-cyan-400/50 hover:bg-cyan-500/20">
+                                    <button className="flex items-center gap-2 rounded-xl border border-cyan-400/30 bg-cyan-500/10 px-4 py-2.5 text-sm font-medium text-cyan-300 transition hover:border-cyan-400/50 hover:bg-cyan-500/20 cursor-pointer">
                                         <UserPlus className="h-4 w-4" />
                                         {t("admin.adminTeam.inviteAdmin")}
                                     </button>
@@ -86,40 +81,16 @@ function InviteAdminForm({
     onCloseModal?: () => void;
 }) {
     const t = useTranslations();
-    const { data: rolesRes } = useRoles();
-    const roles = rolesRes?.data ?? [];
-
-    const adminRoles = useMemo(() => {
-        return roles.filter((r) => r.name !== "LEADER" && r.name !== "INTERN");
-    }, [roles]);
-
-    const defaultRole = adminRoles.find((r) => r.name === "ADMIN") ?? adminRoles[0];
-
-    const roleOptions = useMemo(() => {
-        return adminRoles.map((r) => ({
-            value: r.id,
-            label: `${r.name} ${r.isSystem ? t("admin.adminTeam.systemRole") : t("admin.adminTeam.customRole")}`,
-        }));
-    }, [adminRoles, t]);
 
     const {
         register,
         handleSubmit,
-        control,
-        setValue,
         formState: { errors },
     } = useForm<FormValues>({
         defaultValues: {
             email: "",
-            roleId: defaultRole?.id ?? "",
         },
     });
-
-    useEffect(() => {
-        if (defaultRole?.id) {
-            setValue("roleId", defaultRole.id);
-        }
-    }, [defaultRole?.id, setValue]);
 
     return (
         <div className="px-2 py-8 text-center">
@@ -166,28 +137,12 @@ function InviteAdminForm({
                     )}
                 </div>
 
-                <div>
-                    <Controller
-                        control={control}
-                        name="roleId"
-                        render={({ field }) => (
-                            <Select
-                                label={t("admin.adminTeam.roleLabel")}
-                                placeholder={t("admin.adminTeam.selectRole")}
-                                value={field.value}
-                                onChange={field.onChange}
-                                options={roleOptions}
-                            />
-                        )}
-                    />
-                </div>
-
                 <div className="flex justify-center gap-3 pt-2">
                     <button
                         type="button"
                         onClick={onCloseModal}
                         disabled={isPending}
-                        className="rounded-xl border border-border bg-card px-5 py-2 text-sm text-muted hover:text-foreground dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:text-white disabled:opacity-50"
+                        className="rounded-xl border border-border bg-card px-5 py-2 text-sm text-muted hover:text-foreground dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:text-white disabled:opacity-50 cursor-pointer"
                     >
                         {t("admin.adminTeam.cancel")}
                     </button>

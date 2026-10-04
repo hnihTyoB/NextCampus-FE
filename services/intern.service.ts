@@ -8,6 +8,8 @@ import type {
     DirectCreateInternPayload,
     UpdateInternPayload,
     UpdateMeInternPayload,
+    BatchUpdateInternItem,
+    BatchUpdateInternsResponse,
 } from "@/types/intern";
 import type { MessageSuccessResponse } from "@/types/auth";
 
@@ -84,6 +86,16 @@ export const internService = {
         const response = await api.put<InternSuccessResponse>(
             `/interns/${id}`,
             payload,
+        );
+        return response.data;
+    },
+
+    batchUpdateInterns: async (
+        items: BatchUpdateInternItem[],
+    ): Promise<BatchUpdateInternsResponse> => {
+        const response = await api.post<BatchUpdateInternsResponse>(
+            "/interns/batch-update",
+            { items },
         );
         return response.data;
     },

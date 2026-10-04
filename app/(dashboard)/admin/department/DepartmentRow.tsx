@@ -22,6 +22,9 @@ type DepartmentRowProps = {
   leaders: Leader[];
   leadersLoading: boolean;
   leadersError: boolean;
+  assignedLeaderIds?: Set<string>;
+  onLeaderToggle?: (leader: Leader) => void;
+  isDirty?: boolean;
   onOpenEdit: (dept: Department) => void;
   onOpenPositions: (dept: Department) => void;
   onOpenDelete: (dept: Department) => void;
@@ -32,6 +35,9 @@ export default function DepartmentRow({
   leaders,
   leadersLoading,
   leadersError,
+  assignedLeaderIds,
+  onLeaderToggle,
+  isDirty,
   onOpenEdit,
   onOpenPositions,
   onOpenDelete,
@@ -182,6 +188,9 @@ export default function DepartmentRow({
           leaders={leaders}
           loading={leadersLoading}
           error={leadersError}
+          assignedLeaderIds={assignedLeaderIds}
+          onLeaderToggle={onLeaderToggle}
+          isDirty={isDirty}
         />
       </div>
 

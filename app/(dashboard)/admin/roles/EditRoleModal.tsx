@@ -46,7 +46,7 @@ function EditRoleForm({
       id: role.id,
       payload: {
         name: role.isSystem ? undefined : trimmedName,
-        portalType: role.isSystem ? undefined : portalType,
+        portalType,
         description: description.trim() || undefined,
       },
     });
@@ -119,7 +119,7 @@ function EditRoleForm({
         <PortalTypeSelector
           value={portalType}
           onChange={setPortalType}
-          disabled={isPending || role.isSystem}
+          disabled={isPending}
         />
 
         {/* Description */}
