@@ -80,7 +80,7 @@
         "title": "Edit Role",
         "description": "Update role description, default portal, or display information.",
         "nameLabel": "Role Name",
-        "systemRoleNotice": "System Role (Fixed name & portal type)",
+        "systemRoleNotice": "System Role (Fixed role name)",
         "nameRequired": "Role name is required",
         "nameMinLength": "Role name must have at least 2 characters",
         "portalTypeLabel": "Default Portal (Portal Type)",
