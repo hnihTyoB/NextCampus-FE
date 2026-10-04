@@ -1,18 +1,20 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight, AlertTriangle, Mail, UserPlus, RotateCcw } from "lucide-react";
 import { useSearchParams, usePathname, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 
 import { useApplicationInvites } from "@/hooks/application/useApplicationInvites";
+import { useBatchAssignApplications } from "@/hooks/application/useBatchAssignApplications";
 import type { GetApplicationInvitesParams } from "@/types/application";
 
 import Table from "@/components/ui/Table";
 import Modal from "@/components/ui/Modal";
 import MetalCard from "@/components/ui/MetalCard";
 import Spinner from "@/components/ui/Spinner";
-import OnboardingRow from "./OnboardingRow";
+import BatchSaveBar from "@/components/ui/BatchSaveBar";
+import OnboardingRow, { type OnboardingDraft } from "./OnboardingRow";
 
 const COLUMNS =
   "minmax(200px, 1.4fr) minmax(140px, 1.1fr) minmax(140px, 1.1fr) 140px 130px 115px 44px";
@@ -55,8 +57,84 @@ export default function OnboardingTable() {
   const { data, isPending, isError, refetch, isFetching } =
     useApplicationInvites(params);
 
+  const [drafts, setDrafts] = useState<Record<string, OnboardingDraft>>({});
+  const { mutateAsync: batchAssignApplications, isPending: isSaving } = useBatchAssignApplications();
+
   const invites = data?.data ?? [];
   const meta = data?.meta;
+
+  const handleDraftChange = (inviteId: string, patch: Partial<OnboardingDraft>) => {
+    setDrafts((prev) => ({
+      ...prev,
+      [inviteId]: {
+        ...prev[inviteId],
+        ...patch,
+      },
+    }));
+  };
+
+  const dirtyInvites = useMemo(() => {
+    const list: Array<{
+      inviteId: string;
+      applicationId: string;
+      departmentId: string | null;
+      positionId: string | null;
+    }> = [];
+
+    for (const inv of invites) {
+      if (!inv.application) continue;
+      const initialDeptId =
+        inv.application.department?.id ??
+        ((inv.application as Record<string, unknown>)?.departmentId as string | null | undefined) ??
+        null;
+      const initialPosId =
+        inv.application.position?.id ??
+        ((inv.application as Record<string, unknown>)?.positionId as string | null | undefined) ??
+        null;
+
+      const d = drafts[inv.id];
+      if (!d) continue;
+
+      const effectiveDeptId = d.departmentId !== undefined ? d.departmentId : initialDeptId;
+      const effectivePosId = d.positionId !== undefined ? d.positionId : initialPosId;
+
+      const isDeptDirty = d.departmentId !== undefined && d.departmentId !== initialDeptId;
+      const isPosDirty = d.positionId !== undefined && d.positionId !== initialPosId;
+
+      if (isDeptDirty || isPosDirty) {
+        list.push({
+          inviteId: inv.id,
+          applicationId: inv.application.id,
+          departmentId: effectiveDeptId,
+          positionId: effectivePosId,
+        });
+      }
+    }
+    return list;
+  }, [invites, drafts]);
+
+  const dirtyCount = dirtyInvites.length;
+
+  async function handleBatchSave() {
+    if (dirtyInvites.length === 0) return;
+    try {
+      await batchAssignApplications(
+        dirtyInvites.map((item) => ({
+          id: item.applicationId,
+          departmentId: item.departmentId,
+          positionId: item.positionId,
+        }))
+      );
+      setDrafts({});
+      refetch();
+    } catch {
+      // Error handled by mutation hook
+    }
+  }
+
+  function handleDiscard() {
+    setDrafts({});
+  }
 
   const hasFilters = Boolean(
     searchParams.get("email") ||
@@ -168,7 +246,12 @@ export default function OnboardingTable() {
         <Table.Body
           data={invites}
           render={(invite) => (
-            <OnboardingRow key={invite.id} invite={invite} />
+            <OnboardingRow
+              key={invite.id}
+              invite={invite}
+              draft={drafts[invite.id]}
+              onDraftChange={(patch) => handleDraftChange(invite.id, patch)}
+            />
           )}
         />
 
@@ -208,6 +291,13 @@ export default function OnboardingTable() {
           </Table.Footer>
         )}
       </Table>
+
+      <BatchSaveBar
+        dirtyCount={dirtyCount}
+        isSaving={isSaving}
+        onSave={handleBatchSave}
+        onDiscard={handleDiscard}
+      />
     </Modal>
   );
 }

@@ -120,3 +120,22 @@ export interface UpdateMeInternPayload {
     university?: string | null;
     major?: string | null;
 }
+
+export interface BatchUpdateInternItem {
+    id: string;
+    leaderId?: string | null;
+    departmentId?: string | null;
+    positionId?: string | null;
+    status?: "ACTIVE" | "COMPLETED" | "DROPPED";
+    startDate?: string;
+    duration?: number;
+    discordUsername?: string | null;
+    discordRoleGranted?: boolean;
+}
+
+export interface BatchUpdateInternsResponse {
+    success: boolean;
+    message: string;
+    data: Intern[];
+}
+

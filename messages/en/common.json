@@ -143,5 +143,15 @@
     "desc": "An unexpected error occurred. Our technical team has been notified.",
     "retry": "Try Again",
     "backHome": "Back to Home"
+  },
+  "batchSave": {
+    "pendingChanges": "{count} unsaved change(s)",
+    "unsavedChange": "Unsaved change",
+    "helperText": "Click confirm to save all changes to the system",
+    "discard": "Discard",
+    "saveChanges": "Save changes",
+    "saving": "Saving...",
+    "saveSuccess": "Successfully saved {count} change(s)",
+    "saveError": "Failed to save changes"
   }
 }

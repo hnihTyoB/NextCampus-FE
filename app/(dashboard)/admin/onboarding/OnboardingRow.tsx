@@ -51,11 +51,18 @@ function formatDate(dateStr: string, locale: string) {
     });
 }
 
-interface Props {
-    invite: ApplicationInviteRow;
+export interface OnboardingDraft {
+    departmentId?: string | null;
+    positionId?: string | null;
 }
 
-export default function OnboardingRow({ invite }: Props) {
+interface Props {
+    invite: ApplicationInviteRow;
+    draft?: OnboardingDraft;
+    onDraftChange?: (patch: Partial<OnboardingDraft>) => void;
+}
+
+export default function OnboardingRow({ invite, draft, onDraftChange }: Props) {
     const t = useTranslations();
     const locale = useLocale();
     const router = useRouter();
@@ -80,6 +87,16 @@ export default function OnboardingRow({ invite }: Props) {
     const appStatus = application?.status ?? null;
     const canAssign = can("APPLICATION_ASSIGN") && invite.status === "USED" && appStatus === "PENDING";
 
+    const initialDeptId =
+        application?.department?.id ??
+        ((application as Record<string, unknown>)?.departmentId as string | null | undefined) ??
+        null;
+
+    const initialPosId =
+        application?.position?.id ??
+        ((application as Record<string, unknown>)?.positionId as string | null | undefined) ??
+        null;
+
     const [localDeptId, setLocalDeptId] = useState<string | null | undefined>(undefined);
     const [localPosId, setLocalPosId] = useState<string | null | undefined>(undefined);
 
@@ -91,14 +108,23 @@ export default function OnboardingRow({ invite }: Props) {
     }
 
     const assignedDepartmentId =
-        localDeptId !== undefined
+        draft?.departmentId !== undefined
+            ? draft.departmentId
+            : localDeptId !== undefined
             ? localDeptId
-            : (application?.department?.id ?? (application as Record<string, unknown>)?.departmentId as string | null | undefined ?? null);
+            : initialDeptId;
 
     const assignedPositionId =
-        localPosId !== undefined
+        draft?.positionId !== undefined
+            ? draft.positionId
+            : localPosId !== undefined
             ? localPosId
-            : (application?.position?.id ?? (application as Record<string, unknown>)?.positionId as string | null | undefined ?? null);
+            : initialPosId;
+
+    const isDeptDirty =
+        draft?.departmentId !== undefined && draft.departmentId !== initialDeptId;
+    const isPosDirty =
+        draft?.positionId !== undefined && draft.positionId !== initialPosId;
 
     const { data: departmentData } = useDepartments();
     const departments = departmentData?.data ?? [];
@@ -220,6 +246,13 @@ export default function OnboardingRow({ invite }: Props) {
 
     function handleDepartmentChange(departmentId: string | null) {
         if (!application || !canAssign) return;
+        if (onDraftChange) {
+            onDraftChange({
+                departmentId,
+                positionId: null,
+            });
+            return;
+        }
         setLocalDeptId(departmentId);
         setLocalPosId(null);
         assignApplication(
@@ -238,6 +271,10 @@ export default function OnboardingRow({ invite }: Props) {
 
     function handlePositionChange(positionId: string | null) {
         if (!application || !canAssign || !assignedDepartmentId) return;
+        if (onDraftChange) {
+            onDraftChange({ positionId });
+            return;
+        }
         setLocalPosId(positionId);
         assignApplication(
             {
@@ -352,6 +389,12 @@ export default function OnboardingRow({ invite }: Props) {
                         <InlineSelect
                             ariaLabel={t("admin.onboarding.assignedDepartment")}
                             value={assignedDepartmentId}
+                            fallbackLabel={
+                                departments.find((d) => d.id === assignedDepartmentId)?.name ??
+                                application?.department?.name ??
+                                undefined
+                            }
+                            isDirty={isDeptDirty}
                             placeholder={
                                 application?.preferredDepartment
                                     ? t("admin.onboarding.assignWith", {
@@ -364,6 +407,9 @@ export default function OnboardingRow({ invite }: Props) {
                             onChange={handleDepartmentChange}
                             options={[
                                 { value: null, label: t("admin.onboarding.notSet") },
+                                ...(application?.department && !departments.some((d) => d.id === application.department?.id)
+                                    ? [{ value: application.department.id, label: application.department.name }]
+                                    : []),
                                 ...departments.map((item) => ({
                                     value: item.id,
                                     label: item.name,
@@ -381,6 +427,12 @@ export default function OnboardingRow({ invite }: Props) {
                         <InlineSelect
                             ariaLabel={t("admin.onboarding.assignedPosition")}
                             value={assignedPositionId}
+                            fallbackLabel={
+                                positions.find((p) => p.id === assignedPositionId)?.name ??
+                                application?.position?.name ??
+                                undefined
+                            }
+                            isDirty={isPosDirty}
                             placeholder={
                                 assignedDepartmentId
                                     ? application?.preferredPosition
@@ -398,6 +450,9 @@ export default function OnboardingRow({ invite }: Props) {
                             onChange={handlePositionChange}
                             options={[
                                 { value: null, label: t("admin.onboarding.notSet") },
+                                ...(application?.position && !positions.some((p) => p.id === application.position?.id)
+                                    ? [{ value: application.position.id, label: application.position.name }]
+                                    : []),
                                 ...positions.map((item) => ({
                                     value: item.id,
                                     label: item.name,

@@ -12,11 +12,17 @@ import { MAX_LEADER_DEPARTMENTS, type Leader } from "@/types/leader";
 type LeaderDepartmentSelectProps = {
     leader: Leader;
     departments: Department[];
+    draftDepartmentIds?: string[];
+    onDraftChange?: (departmentIds: string[]) => void;
+    isDirty?: boolean;
 };
 
 export default function LeaderDepartmentSelect({
     leader,
     departments,
+    draftDepartmentIds,
+    onDraftChange,
+    isDirty,
 }: LeaderDepartmentSelectProps) {
     const t = useTranslations();
     const [open, setOpen] = useState(false);
@@ -28,24 +34,41 @@ export default function LeaderDepartmentSelect({
     const listboxId = useId();
 
     const { mutate: updateLeader, isPending } = useUpdateLeader();
-    const selectedIds = leader.departments.map((department) => department.id);
+
+    // Use draftDepartmentIds if provided, fallback to leader.departments
+    const selectedIds = draftDepartmentIds !== undefined
+        ? draftDepartmentIds
+        : leader.departments.map((department) => department.id);
     const selectedIdSet = new Set(selectedIds);
 
     const updatePosition = useCallback(() => {
-        if (triggerRef.current) {
-            const rect = triggerRef.current.getBoundingClientRect();
-            const spaceBelow = window.innerHeight - rect.bottom;
-            const openUpward = spaceBelow < 280 && rect.top > 280;
+        if (!triggerRef.current) return;
+        const rect = triggerRef.current.getBoundingClientRect();
+        const vw = window.innerWidth;
+        const vh = window.innerHeight;
 
-            setDropdownStyle({
-                position: "fixed",
-                top: openUpward ? undefined : rect.bottom + 6,
-                bottom: openUpward ? window.innerHeight - rect.top + 6 : undefined,
-                left: Math.max(8, Math.min(rect.left, window.innerWidth - 320)),
-                width: Math.max(rect.width, 300),
-                zIndex: 9999,
-            });
+        if (rect.bottom < 0 || rect.top > vh || rect.right < 0 || rect.left > vw) {
+            setOpen(false);
+            return;
         }
+
+        const spaceBelow = vh - rect.bottom;
+        const openUpward = spaceBelow < 280 && rect.top > 280;
+        const popoverWidth = Math.min(320, vw - 16);
+        const left = Math.max(8, Math.min(rect.left, vw - popoverWidth - 8));
+        const maxHeight = openUpward
+            ? Math.min(320, Math.max(120, rect.top - 16))
+            : Math.min(320, Math.max(120, spaceBelow - 16));
+
+        setDropdownStyle({
+            position: "fixed",
+            top: openUpward ? undefined : rect.bottom + 6,
+            bottom: openUpward ? vh - rect.top + 6 : undefined,
+            left,
+            width: popoverWidth,
+            maxHeight,
+            zIndex: 9999,
+        });
     }, []);
 
     useEffect(() => {
@@ -61,7 +84,8 @@ export default function LeaderDepartmentSelect({
     }, [open, updatePosition]);
 
     useEffect(() => {
-        function handleOutsideClick(event: MouseEvent) {
+        if (!open) return;
+        function handleOutside(event: MouseEvent | TouchEvent) {
             const target = event.target as Node;
             if (
                 dropdownRef.current &&
@@ -72,9 +96,21 @@ export default function LeaderDepartmentSelect({
                 setOpen(false);
             }
         }
+        function handleKeyDown(e: KeyboardEvent) {
+            if (e.key === "Escape") {
+                setOpen(false);
+                triggerRef.current?.focus();
+            }
+        }
 
-        if (open) document.addEventListener("mousedown", handleOutsideClick);
-        return () => document.removeEventListener("mousedown", handleOutsideClick);
+        document.addEventListener("mousedown", handleOutside);
+        document.addEventListener("touchstart", handleOutside, { passive: true });
+        window.addEventListener("keydown", handleKeyDown);
+        return () => {
+            document.removeEventListener("mousedown", handleOutside);
+            document.removeEventListener("touchstart", handleOutside);
+            window.removeEventListener("keydown", handleKeyDown);
+        };
     }, [open]);
 
     const handleToggle = (departmentId: string) => {
@@ -86,26 +122,47 @@ export default function LeaderDepartmentSelect({
             return;
         }
 
-        const departmentIds = selected
+        const nextIds = selected
             ? selectedIds.filter((id) => id !== departmentId)
             : [...selectedIds, departmentId];
 
-        updateLeader({
-            id: leader.id,
-            payload: { departmentIds, position: null },
-        });
+        if (onDraftChange) {
+            onDraftChange(nextIds);
+        } else {
+            updateLeader({
+                id: leader.id,
+                payload: { departmentIds: nextIds, position: null },
+            });
+        }
+    };
+
+    const getDeptName = (id: string) => {
+        return (
+            departments.find((d) => d.id === id)?.name ??
+            leader.departments.find((d) => d.id === id)?.name ??
+            ""
+        );
     };
 
     const label = (() => {
-        if (leader.departments.length === 0) return t("admin.leaders.notSet");
-        if (leader.departments.length === 1) return leader.departments[0].name;
-        return t("admin.leaders.multiDepartments", { n: leader.departments.length });
+        if (selectedIds.length === 0) return t("admin.leaders.notSet");
+        if (selectedIds.length === 1) return getDeptName(selectedIds[0]) || t("admin.leaders.notSet");
+        return t("admin.leaders.multiDepartments", { n: selectedIds.length });
     })();
+
+    const titleText =
+        selectedIds.map(getDeptName).filter(Boolean).join(", ") ||
+        t("admin.leaders.notSet");
 
     const filteredDepartments = departments.filter((d) => {
         if (!searchQuery.trim()) return true;
         return d.name.toLowerCase().includes(searchQuery.toLowerCase());
     });
+
+    const isDirtyEffective = isDirty ?? (draftDepartmentIds !== undefined && (
+        draftDepartmentIds.length !== leader.departments.length ||
+        draftDepartmentIds.some((id) => !leader.departments.some((d) => d.id === id))
+    ));
 
     return (
         <div className="relative">
@@ -116,25 +173,34 @@ export default function LeaderDepartmentSelect({
                 aria-haspopup="listbox"
                 aria-expanded={open}
                 aria-controls={listboxId}
-                onClick={() => setOpen((current) => !current)}
+                onClick={() => {
+                    updatePosition();
+                    setOpen((current) => !current);
+                }}
                 disabled={isPending}
-                className="flex w-full items-center justify-between gap-1.5 text-left text-muted transition hover:text-cyan-400 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-cyan-400/50 rounded-lg py-1 px-1.5 disabled:cursor-not-allowed disabled:opacity-60"
+                className={`flex w-full items-center justify-between gap-1.5 text-left transition hover:text-cyan-400 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-cyan-400/50 rounded-lg py-1 px-1.5 disabled:cursor-not-allowed disabled:opacity-60 cursor-pointer ${
+                    isDirtyEffective ? "ring-1 ring-amber-400/40 bg-amber-400/5" : "text-muted"
+                }`}
             >
                 {isPending ? (
                     <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin text-cyan-400" />
                 ) : (
                     <>
                         <span
-                            className={`min-w-0 truncate text-xs sm:text-sm ${
-                                leader.departments.length === 0
+                            className={`min-w-0 flex items-center gap-1.5 truncate text-xs sm:text-sm ${
+                                selectedIds.length === 0
                                     ? "italic text-muted"
                                     : "font-medium text-foreground"
-                            }`}
-                            title={leader.departments
-                                .map((department) => department.name)
-                                .join(", ")}
+                            } ${isDirtyEffective ? "text-amber-500 dark:text-amber-300 font-semibold" : ""}`}
+                            title={titleText}
                         >
-                            {label}
+                            {isDirtyEffective && (
+                                <span
+                                    className="h-2 w-2 rounded-full bg-amber-400 shrink-0 animate-pulse shadow-[0_0_8px_rgba(251,191,36,0.8)]"
+                                    title={t("batchSave.unsavedChange")}
+                                />
+                            )}
+                            <span className="truncate">{label}</span>
                         </span>
                         <ChevronDown
                             className={`h-3.5 w-3.5 shrink-0 text-muted transition-transform duration-200 ${
@@ -159,9 +225,10 @@ export default function LeaderDepartmentSelect({
                             if (event.key === "Escape") {
                                 event.preventDefault();
                                 setOpen(false);
+                                triggerRef.current?.focus();
                             }
                         }}
-                        className="rounded-2xl border border-border dark:border-white/10 bg-card/95 p-2 shadow-[0_16px_48px_rgba(0,0,0,.55)] backdrop-blur-2xl"
+                        className="rounded-2xl border border-border bg-card/95 dark:border-white/10 dark:bg-[#0c1322]/95 p-2 shadow-xl dark:shadow-[0_16px_48px_rgba(0,0,0,.6)] backdrop-blur-2xl animate-fadeIn"
                     >
                         {/* Header & Quick search */}
                         <div className="px-2 pt-1 pb-2">
@@ -183,7 +250,7 @@ export default function LeaderDepartmentSelect({
                                         <button
                                             type="button"
                                             onClick={() => setSearchQuery("")}
-                                            className="absolute right-2 top-1/2 -translate-y-1/2 text-muted hover:text-foreground"
+                                            className="absolute right-2 top-1/2 -translate-y-1/2 text-muted hover:text-foreground cursor-pointer"
                                         >
                                             <X className="h-3 w-3" />
                                         </button>
@@ -193,7 +260,7 @@ export default function LeaderDepartmentSelect({
                         </div>
 
                         {/* Department Options */}
-                        <div className="max-h-[240px] overflow-y-auto space-y-1 custom-scrollbar pr-1">
+                        <div className="max-h-[220px] overflow-y-auto space-y-1 scrollbar-dropdown pr-1">
                             {filteredDepartments.length === 0 ? (
                                 <p className="px-3 py-3 text-xs italic text-muted text-center">
                                     {t("admin.leaders.noDepartmentsAvailable")}
@@ -214,15 +281,15 @@ export default function LeaderDepartmentSelect({
                                             aria-disabled={limitReached}
                                             disabled={isPending || limitReached}
                                             onClick={() => handleToggle(department.id)}
-                                            className={`flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left transition-colors disabled:opacity-50 ${
+                                            className={`flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left transition-colors cursor-pointer disabled:opacity-50 ${
                                                 selected
-                                                    ? "bg-cyan-500/10 text-cyan-400 border border-cyan-400/20"
+                                                    ? "bg-cyan-500/10 text-cyan-400 border border-cyan-400/20 font-semibold"
                                                     : limitReached
                                                       ? "cursor-not-allowed text-muted/40 border border-transparent"
-                                                      : "text-muted hover:bg-white/5 hover:text-foreground border border-transparent"
+                                                      : "text-muted hover:bg-slate-100 dark:hover:bg-white/5 hover:text-foreground border border-transparent"
                                             }`}
                                         >
-                                            <span className="min-w-0 flex-1 truncate text-xs sm:text-sm font-medium">
+                                            <span className="min-w-0 flex-1 truncate text-xs sm:text-sm">
                                                 {department.name}
                                             </span>
                                             {selected && (
@@ -239,4 +306,3 @@ export default function LeaderDepartmentSelect({
         </div>
     );
 }
-

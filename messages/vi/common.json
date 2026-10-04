@@ -143,5 +143,15 @@
     "desc": "Đã xảy ra lỗi không mong muốn trên hệ thống. Đội ngũ kỹ thuật đã được ghi nhận sự cố này.",
     "retry": "Thử lại",
     "backHome": "Quay lại trang chủ"
+  },
+  "batchSave": {
+    "pendingChanges": "Có {count} thay đổi chưa lưu",
+    "unsavedChange": "Thay đổi chưa lưu",
+    "helperText": "Nhấn xác nhận để lưu toàn bộ thay đổi lên hệ thống",
+    "discard": "Hủy bỏ",
+    "saveChanges": "Lưu thay đổi",
+    "saving": "Đang lưu...",
+    "saveSuccess": "Đã lưu thành công {count} thay đổi",
+    "saveError": "Có lỗi xảy ra khi lưu thay đổi"
   }
 }
