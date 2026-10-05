@@ -1,7 +1,6 @@
 "use client";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { toast } from "react-hot-toast";
 
 import { deleteApplicationService } from "@/services/application.service";
 import type { ApplicationInviteRow } from "@/types/application";
@@ -41,7 +40,6 @@ export function useDeleteApplication() {
       ctx?.prev?.forEach(([key, data]) =>
         queryClient.setQueryData(key, data),
       );
-      toast.error("Failed to delete application.");
     },
   });
 }

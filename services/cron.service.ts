@@ -28,9 +28,13 @@ export const cronService = {
   },
 
   // Bật / Tắt lịch chạy tự động của 1 cron job
-  toggleJob: async (jobName: string): Promise<ToggleCronJobResponse> => {
+  toggleJob: async (
+    jobName: string,
+    payload?: { isEnabled?: boolean }
+  ): Promise<ToggleCronJobResponse> => {
     const response = await api.patch<ToggleCronJobResponse>(
-      `/cron/jobs/${encodeURIComponent(jobName)}/toggle`
+      `/cron/jobs/${encodeURIComponent(jobName)}/toggle`,
+      payload
     );
     return response.data;
   },

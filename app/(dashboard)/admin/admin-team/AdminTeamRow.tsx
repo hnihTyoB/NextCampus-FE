@@ -29,6 +29,10 @@ export default function AdminTeamRow({ admin }: AdminTeamRowProps) {
     const canDelete = can("USER_DELETE");
     const currentUser = state.user;
     const [menuOpen, setMenuOpen] = useState(false);
+    const [failedAvatarUrl, setFailedAvatarUrl] = useState<string | null>(null);
+    const hasAvatar = Boolean(
+        admin.avatarUrl && failedAvatarUrl !== admin.avatarUrl
+    );
     const menuRef = useRef<HTMLDivElement>(null);
 
     const queryClient = useQueryClient();
@@ -79,12 +83,14 @@ export default function AdminTeamRow({ admin }: AdminTeamRowProps) {
             <Table.Row>
                 {/* Admin info */}
                 <div className="flex items-center gap-3 min-w-0">
-                    {admin.avatarUrl ? (
+                    {hasAvatar ? (
                         <Image
-                            src={admin.avatarUrl}
+                            src={admin.avatarUrl!}
                             alt={admin.fullName ?? ""}
                             width={40}
                             height={40}
+                            unoptimized
+                            onError={() => setFailedAvatarUrl(admin.avatarUrl ?? null)}
                             className="h-10 w-10 rounded-lg object-cover"
                         />
                     ) : (

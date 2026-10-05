@@ -7,6 +7,7 @@ export function useProvisionAllDepartments() {
   const queryClient = useQueryClient();
 
   return useMutation<ProvisionAllDepartmentsResponse, Error, void>({
+    mutationKey: ["discord", "provision-all"],
     mutationFn: () => discordService.provisionAllDepartments(),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: DISCORD_WEBHOOKS_QUERY_KEY });

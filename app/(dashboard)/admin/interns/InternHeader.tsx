@@ -10,6 +10,7 @@ import CreateInternModal from "./CreateInternModal";
 import PendingInternsTable from "./PendingInternsTable";
 import MetalCard from "@/components/ui/MetalCard";
 import Modal from "@/components/ui/Modal";
+import { toast } from "react-hot-toast";
 import { useCreateInvite } from "@/hooks/application/useCreateInvite";
 import { useRBAC } from "@/hooks/rbac/useRBAC";
 
@@ -109,7 +110,20 @@ export default function InternHeader() {
             <Modal.Window name="invite-intern" size="sm">
                 <InviteInternForm
                     isPending={isPending}
-                    onSubmit={(email, onSuccess) => createInvite({ email }, { onSuccess })}
+                    onSubmit={(email, onSuccess) =>
+                        createInvite(
+                            { email },
+                            {
+                                onSuccess: () => {
+                                    toast.success(t("admin.onboarding.createSuccess"));
+                                    onSuccess();
+                                },
+                                onError: () => {
+                                    toast.error(t("admin.onboarding.createError"));
+                                },
+                            }
+                        )
+                    }
                 />
             </Modal.Window>
         </Modal>

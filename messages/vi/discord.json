@@ -138,7 +138,7 @@
       "threadIdHelp": "ID của luồng riêng tư trên Discord để chuyển hướng thông báo tự động vào bên trong luồng.",
       "roleIdLabel": "Discord Role ID cần tag (Tùy chọn)",
       "roleIdPlaceholder": "Ví dụ: 123456789012345678",
-      "roleIdHelp": "Hệ thống sẽ tag role này (<@&roleId>) khi có thông báo quan trọng.",
+      "roleIdHelp": "Hệ thống sẽ tag role này (@&roleId) khi có thông báo quan trọng.",
       "isEnabledLabel": "Kích hoạt Webhook này",
       "cancelButton": "Hủy bỏ",
       "saveButton": "Lưu cấu hình",

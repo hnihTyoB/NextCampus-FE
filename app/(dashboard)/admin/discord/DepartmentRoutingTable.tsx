@@ -20,6 +20,7 @@ import type {
   DiscordWebhookConfig,
   DiscordWebhookPurpose,
 } from "@/types/discord";
+import { useIsMutating } from "@tanstack/react-query";
 import { useTestDiscordWebhook, useProvisionDepartment } from "@/hooks/discord";
 import { useRBAC } from "@/hooks/rbac/useRBAC";
 
@@ -52,6 +53,8 @@ export default function DepartmentRoutingTable({
   const canManage = can("DISCORD_MANAGE");
   const testMutation = useTestDiscordWebhook();
   const provisionMutation = useProvisionDepartment();
+  const isProvisioningAll =
+    useIsMutating({ mutationKey: ["discord", "provision-all"] }) > 0;
   const [searchTerm, setSearchTerm] = useState("");
   const [testingId, setTestingId] = useState<string | null>(null);
   const [syncingDeptId, setSyncingDeptId] = useState<string | null>(null);
@@ -372,9 +375,13 @@ export default function DepartmentRoutingTable({
                       <>
                         <button
                           type="button"
-                          disabled={isSyncing}
+                          disabled={isSyncing || isProvisioningAll}
                           onClick={() => handleSyncDiscord(dept.id)}
-                          title={t("departmentSection.syncDiscordTooltip")}
+                          title={
+                            isProvisioningAll
+                              ? t("provisioning")
+                              : t("departmentSection.syncDiscordTooltip")
+                          }
                           className="
                             inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl
                             border border-cyan-300 bg-cyan-100/80 text-cyan-700 hover:bg-cyan-200/80

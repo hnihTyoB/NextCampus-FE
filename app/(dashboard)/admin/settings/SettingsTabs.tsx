@@ -91,7 +91,7 @@ export default function SettingsTabs() {
   if (tabs.length === 0) {
     return (
       <div className="p-8 text-center text-xs text-muted">
-        Bạn không có quyền truy cập vào các chức năng cấu hình hệ thống.
+        {t("accessDenied")}
       </div>
     );
   }

@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { useSearchParams, usePathname, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import Image from "next/image";
+import ActorAvatar from "./ActorAvatar";
 import {
   ChevronLeft,
   ChevronRight,
@@ -79,12 +79,6 @@ function getTargetTypeIcon(type: string | null) {
   }
 }
 
-function getInitials(name?: string | null): string {
-  if (!name) return "SY";
-  const parts = name.trim().split(" ");
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-}
 
 export default function ActivityLogTable() {
   const t = useTranslations();
@@ -270,7 +264,6 @@ export default function ActivityLogTable() {
             const actorRole = log.actor?.role?.name || log.user?.role?.name || null;
             const actorAvatar = log.actor?.avatarUrl || log.user?.avatarUrl || null;
             const isSystem = (!log.actor && !log.user?.fullName) || actorName === t("admin.activityLogs.system") || (!log.actorId && !log.userId && !actorEmail);
-            const initials = getInitials(actorName);
 
             return (
               <Table.Row key={log.id}>
@@ -288,35 +281,19 @@ export default function ActivityLogTable() {
 
                 {/* Actor */}
                 <div className="flex items-center gap-3 min-w-0 pr-2">
-                  {isSystem ? (
-                    <div
-                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-cyan-300 bg-cyan-100/80 text-cyan-700 dark:border-cyan-400/30 dark:bg-cyan-500/10 dark:text-cyan-300 shadow-xs"
-                      title={actorName}
-                    >
-                      <Shield className="h-4 w-4 shrink-0" />
-                    </div>
-                  ) : actorAvatar ? (
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200 dark:border-white/10 bg-slate-100 dark:bg-white/5 overflow-hidden shadow-xs">
-                      <Image
-                        src={actorAvatar}
-                        alt={actorName}
-                        width={36}
-                        height={36}
-                        unoptimized
-                        className="h-full w-full object-cover"
-                      />
-                    </div>
-                  ) : (
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary-main to-primary-light text-xs font-bold text-white shadow-xs dark:from-slate-700 dark:to-slate-800 dark:ring-1 dark:ring-white/10">
-                      {initials}
-                    </div>
-                  )}
+                  <ActorAvatar
+                    avatarUrl={actorAvatar}
+                    name={actorName}
+                    isSystem={isSystem}
+                    fallbackTitle={t("admin.activityLogs.system")}
+                    size="sm"
+                  />
                   <div className="flex flex-col min-w-0 justify-center">
                     <span className="text-xs font-semibold text-foreground truncate" title={actorName}>
                       {actorName}
                     </span>
-                    <span className="text-[10px] text-muted truncate" title={actorEmail || (actorRole ? `Vai trò: ${actorRole}` : "—")}>
-                      {actorEmail || (actorRole ? `Vai trò: ${actorRole}` : "—")}
+                    <span className="text-[10px] text-muted truncate" title={actorEmail || (actorRole ? `${t("admin.activityLogs.actorRole")}: ${actorRole}` : "—")}>
+                      {actorEmail || (actorRole ? `${t("admin.activityLogs.actorRole")}: ${actorRole}` : "—")}
                     </span>
                   </div>
                 </div>

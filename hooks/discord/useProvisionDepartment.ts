@@ -7,6 +7,7 @@ export function useProvisionDepartment() {
   const queryClient = useQueryClient();
 
   return useMutation<ProvisionDepartmentResponse, Error, string>({
+    mutationKey: ["discord", "provision-department"],
     mutationFn: (departmentId: string) =>
       discordService.provisionDepartment(departmentId),
     onSuccess: () => {

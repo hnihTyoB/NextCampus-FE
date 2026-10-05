@@ -63,6 +63,10 @@ export default function LeaderRow({ leader, draft, onDraftChange }: LeaderRowPro
 
     const [updatingField, setUpdatingField] = useState<"position" | null>(null);
     const [menuOpen, setMenuOpen] = useState(false);
+    const [failedAvatarUrl, setFailedAvatarUrl] = useState<string | null>(null);
+    const hasAvatar = Boolean(
+        leader.user.avatarUrl && failedAvatarUrl !== leader.user.avatarUrl
+    );
     const [menuStyle, setMenuStyle] = useState<React.CSSProperties>({});
     const triggerRef = useRef<HTMLButtonElement>(null);
     const menuRef = useRef<HTMLDivElement>(null);
@@ -206,12 +210,14 @@ export default function LeaderRow({ leader, draft, onDraftChange }: LeaderRowPro
             <Table.Row>
                 {/* Leader info */}
                 <div className="flex items-center gap-3 min-w-0 pr-2">
-                    {leader.user.avatarUrl ? (
+                    {hasAvatar ? (
                         <Image
-                            src={leader.user.avatarUrl}
+                            src={leader.user.avatarUrl!}
                             alt={leader.user.fullName ?? ""}
                             width={40}
                             height={40}
+                            unoptimized
+                            onError={() => setFailedAvatarUrl(leader.user.avatarUrl ?? null)}
                             className="h-10 w-10 rounded-xl object-cover shrink-0"
                         />
                     ) : (

@@ -1,7 +1,6 @@
 "use client";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { toast } from "react-hot-toast";
 import { AxiosError } from "axios";
 
 import { reviewApplicationService } from "@/services/application.service";
@@ -81,25 +80,17 @@ export function useReviewApplication() {
             return { prevInvites, prevApps };
         },
 
-        onSuccess: (_data, { payload }) => {
-            toast.success(
-                payload.status === "APPROVED"
-                    ? "Application approved. Intern account created."
-                    : "Application rejected.",
-            );
+        onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["application-invites"] });
             queryClient.invalidateQueries({ queryKey: ["applications"] });
         },
 
-        onError: (error: AxiosError<ApiErrorResponse>, _vars, ctx) => {
+        onError: (_error: AxiosError<ApiErrorResponse>, _vars, ctx) => {
             ctx?.prevInvites?.forEach(([key, data]) =>
                 queryClient.setQueryData(key, data),
             );
             ctx?.prevApps?.forEach(([key, data]) =>
                 queryClient.setQueryData(key, data),
-            );
-            toast.error(
-                error.response?.data?.message ?? "Failed to review application.",
             );
         },
     });

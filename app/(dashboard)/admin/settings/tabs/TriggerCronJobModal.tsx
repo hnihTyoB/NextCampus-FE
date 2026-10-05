@@ -61,7 +61,7 @@ export default function TriggerCronJobModal({
     <Modal
       isOpen={isOpen}
       onClose={handleClose}
-      title={`Kích hoạt tác vụ: ${job.name}`}
+      title={t("triggerModal.title", { jobName: job.name })}
       size="md"
     >
       <div className="space-y-4 px-1 py-1">
@@ -82,7 +82,7 @@ export default function TriggerCronJobModal({
         {job.name === "cleanup-audit-logs" && !result && (
           <div className="space-y-1.5">
             <label className="text-xs font-semibold text-muted">
-              Số ngày lưu trữ log tối đa (retentionDays):
+              {t("triggerModal.retentionDaysLabel")}
             </label>
             <Input
               type="number"
@@ -93,7 +93,7 @@ export default function TriggerCronJobModal({
               disabled={triggerMutation.isPending}
             />
             <p className="text-[11px] text-muted">
-              Mặc định 30 ngày. Các bản ghi audit log cũ hơn mốc này sẽ được dọn dẹp.
+              {t("triggerModal.retentionDaysHint")}
             </p>
           </div>
         )}
@@ -118,19 +118,19 @@ export default function TriggerCronJobModal({
                   result.success ? "text-emerald-400" : "text-red-400"
                 }`}
               >
-                {result.success ? "Thực thi thành công" : "Thực thi thất bại"}
+                {result.success ? t("triggerModal.executionSuccess") : t("triggerModal.executionFailed")}
               </h5>
             </div>
 
             <div className="grid grid-cols-2 gap-2 text-xs">
               <div className="text-muted">
-                Thời gian xử lý:{" "}
+                {t("triggerModal.duration")}{" "}
                 <strong className="text-foreground font-mono">
                   {result.durationMs}ms
                 </strong>
               </div>
               <div className="text-muted">
-                Trạng thái:{" "}
+                {t("triggerModal.status")}{" "}
                 <strong className="text-foreground">
                   {result.success ? "SUCCESS" : "FAILED"}
                 </strong>
@@ -140,7 +140,7 @@ export default function TriggerCronJobModal({
             {result.data && (
               <div className="space-y-1">
                 <span className="text-[11px] font-semibold text-muted">
-                  Dữ liệu phản hồi:
+                  {t("triggerModal.responseData")}
                 </span>
                 <pre className="p-2.5 rounded-lg bg-background/80 border border-border/40 font-mono text-[11px] text-foreground overflow-x-auto max-h-36">
                   {JSON.stringify(result.data, null, 2)}
@@ -150,7 +150,7 @@ export default function TriggerCronJobModal({
 
             {result.error && (
               <div className="text-xs text-red-300">
-                Lỗi: {result.error}
+                {t("triggerModal.error", { error: result.error })}
               </div>
             )}
           </div>
@@ -158,7 +158,7 @@ export default function TriggerCronJobModal({
 
         <div className="flex justify-end gap-2.5 pt-3 border-t border-border/40">
           <Button variant="outline" size="sm" onClick={handleClose}>
-            {result ? "Đóng" : "Hủy bỏ"}
+            {result ? t("triggerModal.close") : t("triggerModal.cancel")}
           </Button>
 
           {!result && (

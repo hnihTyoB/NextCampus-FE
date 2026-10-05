@@ -35,8 +35,9 @@ export default function LeaderHeader() {
             queryClient.invalidateQueries({ queryKey: ["users"] });
             queryClient.invalidateQueries({ queryKey: ["leaders"] });
         },
-        onError: () => {
-            toast.error(t("admin.leaders.createError"));
+        onError: (err: any) => {
+            const apiMsg = err?.response?.data?.message;
+            toast.error(apiMsg || t("admin.leaders.createError"));
         },
     });
 

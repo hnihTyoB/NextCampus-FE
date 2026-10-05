@@ -1,7 +1,6 @@
 "use client";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { toast } from "react-hot-toast";
 
 import { revokeInviteService } from "@/services/application.service";
 import type { ApplicationInviteRow } from "@/types/application";
@@ -43,7 +42,6 @@ export function useRevokeInvite() {
       ctx?.prev?.forEach(([key, data]) =>
         queryClient.setQueryData(key, data),
       );
-      toast.error("Failed to revoke invitation.");
     },
   });
 }

@@ -4,14 +4,13 @@ import React, { useState } from "react";
 import { useTranslations } from "next-intl";
 import {
   Clock,
-  Play,
   Search,
   Cpu,
   CheckCircle2,
   AlertCircle,
   Lock,
-  Power,
   PowerOff,
+  Play,
 } from "lucide-react";
 import MetalCard from "@/components/ui/MetalCard";
 import Button from "@/components/ui/Button";
@@ -41,7 +40,7 @@ export default function CronJobsTab() {
       <div className="flex h-72 w-full flex-col items-center justify-center gap-3">
         <Spinner size="lg" />
         <p className="text-xs font-medium text-muted animate-pulse">
-          Đang tải danh sách tác vụ tự động...
+          {t("loading")}
         </p>
       </div>
     );
@@ -54,10 +53,10 @@ export default function CronJobsTab() {
           <AlertCircle className="h-6 w-6" />
         </div>
         <p className="text-sm font-semibold text-foreground">
-          Không thể tải danh sách tác vụ nền.
+          {t("loadError")}
         </p>
         <Button variant="outline" size="sm" onClick={() => refetch()}>
-          Thử lại
+          {t("retry")}
         </Button>
       </MetalCard>
     );
@@ -95,8 +94,9 @@ export default function CronJobsTab() {
           <div className="mt-4 flex items-center gap-2 rounded-lg border border-border/40 bg-card/40 p-3 text-xs text-muted">
             <Lock className="h-4 w-4 shrink-0 text-amber-400" />
             <span>
-              Bạn chỉ có quyền xem danh sách tác vụ. Cần quyền{" "}
-              <code className="text-foreground font-mono">CRON_JOB_MANAGE</code> để kích hoạt hoặc bật/tắt lịch tự động.
+              {t.rich("readOnlyPermissionNotice", {
+                code: (chunks) => <code className="text-foreground font-mono">{chunks}</code>,
+              })}
             </span>
           </div>
         )}
@@ -108,14 +108,16 @@ export default function CronJobsTab() {
           <div className="col-span-full">
             <MetalCard className="p-12 text-center text-xs text-muted space-y-2">
               <Clock className="h-8 w-8 mx-auto text-muted/50" />
-              <p>Không tìm thấy tác vụ tự động nào phù hợp.</p>
+              <p>{t("emptySearchResults")}</p>
             </MetalCard>
           </div>
         ) : (
           jobs.map((job) => {
             const isToggling =
               toggleMutation.isPending &&
-              (toggleMutation.variables as string) === job.name;
+              (typeof toggleMutation.variables === "string"
+                ? toggleMutation.variables === job.name
+                : toggleMutation.variables?.jobName === job.name);
 
             return (
               <MetalCard
@@ -147,7 +149,7 @@ export default function CronJobsTab() {
                     ) : (
                       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-zinc-500/10 text-zinc-400 border border-zinc-500/20 shrink-0">
                         <PowerOff className="h-3 w-3" />
-                        Đã tắt
+                        {t("statusDisabled")}
                       </span>
                     )}
                   </div>
@@ -157,46 +159,101 @@ export default function CronJobsTab() {
                   </p>
                 </div>
 
-                {canManage && (
-                  <div className="pt-2 border-t border-border/30 flex items-center justify-between gap-2">
-                    {/* Toggle enable/disable */}
-                    <button
-                      type="button"
-                      id={`cron-toggle-${job.name}`}
-                      disabled={isToggling}
-                      onClick={() => toggleMutation.mutate(job.name)}
-                      title={job.isEnabled ? "Tắt lịch tự động" : "Bật lịch tự động"}
-                      className={`flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-1.5 rounded-lg border transition-all disabled:opacity-50 ${
+                {/* Footer with Switch Tắt/Mở & Nút Chạy ngay */}
+                <div className="pt-3 border-t border-border/30 flex items-center justify-between gap-3 flex-wrap">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-medium text-foreground">
+                      {t("scheduleToggle")}
+                    </span>
+                    <span
+                      className={`text-[11px] font-semibold transition-colors ${
                         job.isEnabled
-                          ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20"
-                          : "border-zinc-500/30 bg-zinc-500/10 text-zinc-400 hover:bg-zinc-500/20"
+                          ? "text-emerald-500 dark:text-emerald-400"
+                          : "text-muted"
                       }`}
                     >
-                      {isToggling ? (
-                        <svg className="h-3 w-3 animate-spin" viewBox="0 0 24 24" fill="none">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
-                        </svg>
-                      ) : job.isEnabled ? (
-                        <Power className="h-3 w-3" />
-                      ) : (
-                        <PowerOff className="h-3 w-3" />
-                      )}
-                      {job.isEnabled ? "Đang bật" : "Đã tắt"}
-                    </button>
-
-                    {/* Run now */}
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setSelectedJob(job)}
-                      className="text-xs px-3 py-1.5 hover:border-primary-light hover:text-primary-light"
-                    >
-                      <Play className="h-3.5 w-3.5 mr-1.5 text-primary-light" />
-                      {t("runNow")}
-                    </Button>
+                      {job.isEnabled ? t("statusEnabled") : t("statusDisabled")}
+                    </span>
                   </div>
-                )}
+
+                  <div className="flex items-center gap-2.5">
+                    {canManage && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setSelectedJob(job)}
+                        className="text-xs px-2.5 py-1 h-[28px] rounded-lg hover:border-primary-light hover:text-primary-light"
+                      >
+                        <Play className="h-3 w-3 mr-1 text-primary-light shrink-0" />
+                        {t("runNow")}
+                      </Button>
+                    )}
+
+                    <button
+                      type="button"
+                      role="switch"
+                      id={`cron-switch-${job.name}`}
+                      aria-checked={job.isEnabled}
+                      aria-label={`${job.name} - ${
+                        job.isEnabled ? t("tooltipDisable") : t("tooltipEnable")
+                      }`}
+                      disabled={!canManage || isToggling}
+                      onClick={() =>
+                        canManage &&
+                        toggleMutation.mutate({
+                          jobName: job.name,
+                          isEnabled: !job.isEnabled,
+                        })
+                      }
+                      title={
+                        !canManage
+                          ? t("readOnlyPermissionNotice")
+                          : job.isEnabled
+                            ? t("tooltipDisable")
+                            : t("tooltipEnable")
+                      }
+                      className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full border-2 border-transparent transition-colors duration-300 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary-light focus:ring-offset-2 focus:ring-offset-background ${
+                        !canManage
+                          ? "cursor-not-allowed opacity-50"
+                          : isToggling
+                            ? "cursor-wait opacity-70"
+                            : "cursor-pointer"
+                      } ${
+                        job.isEnabled
+                          ? "bg-emerald-500 shadow-[0_0_12px_rgba(16,185,129,0.35)]"
+                          : "bg-slate-300 dark:bg-slate-700 hover:bg-slate-400 dark:hover:bg-slate-600"
+                      }`}
+                    >
+                      <span
+                        className={`pointer-events-none flex h-4 w-4 transform items-center justify-center rounded-full bg-white shadow-md ring-0 transition-transform duration-300 ease-in-out ${
+                          job.isEnabled ? "translate-x-5" : "translate-x-0.5"
+                        }`}
+                      >
+                        {isToggling && (
+                          <svg
+                            className="h-2.5 w-2.5 animate-spin text-emerald-600 dark:text-emerald-500"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                          >
+                            <circle
+                              className="opacity-25"
+                              cx="12"
+                              cy="12"
+                              r="10"
+                              stroke="currentColor"
+                              strokeWidth="4"
+                            />
+                            <path
+                              className="opacity-75"
+                              fill="currentColor"
+                              d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+                            />
+                          </svg>
+                        )}
+                      </span>
+                    </button>
+                  </div>
+                </div>
               </MetalCard>
             );
           })

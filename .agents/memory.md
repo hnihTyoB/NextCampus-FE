@@ -282,3 +282,30 @@ Chỉ lưu các quyết định kiến trúc và UI/UX đã được xác nhận
     - Nút chuyển đổi chế độ xem `[ Công Việc Của Tôi ]` / `[ Bảng Dự Án Nhóm ]` và nút chuyển Kanban / Graph sử dụng container `border border-border/80 bg-slate-100/90 shadow-sm dark:border-white/10 dark:bg-slate-900/60 dark:shadow-none`.
     - Toàn bộ các cột Kanban, thẻ công việc, thẻ KPI Mini, nhãn vai trò, bảng sơ đồ DAG có biến thể màu sắc rõ ràng cho Light Mode (`bg-card`, `bg-surface-elevated`, `text-*-700|800`, `border-*-200|300`) kết hợp song song với hiệu ứng Cyberpunk neon glow trong Dark Mode qua prefix `dark:`.
 
+- **2026-10-05 — Chuẩn Hóa Thành Phần Tải Tệp Tin FileUpload (`components/ui/FileUpload.tsx`)**:
+  - **Mục đích**: Tách biệt hoàn toàn logic và giao diện tải file thành UI Component dùng chung độc lập, phục vụ cho trang Onboarding, nộp báo cáo thực tập, đính kèm tài liệu task, minh chứng nghỉ phép...
+  - **Đặc điểm nổi bật**:
+    * **Thanh tiến trình phần trăm thực (Realtime Progress Bar)**: Gradient Cyan-to-Blue rực rỡ (`bg-gradient-to-r from-cyan-400 via-sky-500 to-blue-600`), hiệu ứng phát sáng `shadow-[0_0_12px_rgba(21,174,245,0.6)]`, hiển thị số phần trăm to rõ (`text-primary-light font-bold tabular-nums`) kèm thông điệp trạng thái tải.
+    * **Vùng kéo thả trực quan (Drag & Drop Zone)**: Viền đứt nét Cyberpunk, tự động đổi viền phát sáng cyan và co giãn tinh tế khi kéo file vào vùng thả (`isDragging`).
+    * **Quản lý danh sách file (Multi-file Management)**: Hiển thị icon theo loại file (PDF, Word, Excel, Archive, Image), tên file, dung lượng định dạng gọn gàng (`KB`/`MB`), nút xóa từng file (`X`) có phản hồi xúc giác.
+    * **Giới hạn & Kiểm tra thông minh**: Hỗ trợ cấu hình `maxFiles`, `maxSizeMB`, `accept`, `allowedExtensions`, tự động validate định dạng và dung lượng trước khi kích hoạt hàm upload.
+  - **Sử dụng mẫu**:
+    ```tsx
+    import FileUpload from "@/components/ui/FileUpload";
+
+    <FileUpload
+      label="Tài liệu đính kèm"
+      required
+      maxFiles={3}
+      maxSizeMB={10}
+      accept=".pdf,.doc,.docx"
+      allowedExtensions={[".pdf", ".doc", ".docx"]}
+      files={files}
+      isUploading={isUploading}
+      uploadProgress={uploadProgress}
+      uploadStatusText={uploadStatusText}
+      onFilesSelected={handleUploadFiles}
+      onFileRemove={handleRemoveFile}
+    />
+    ```
+

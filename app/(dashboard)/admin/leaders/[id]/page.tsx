@@ -107,6 +107,10 @@ function LeaderHeader({ leader }: { leader: Leader }) {
     const queryClient = useQueryClient();
     const { can } = useRBAC();
     const canUpdateUser = can("USER_UPDATE");
+    const [failedAvatarUrl, setFailedAvatarUrl] = useState<string | null>(null);
+    const hasAvatar = Boolean(
+        leader.user.avatarUrl && failedAvatarUrl !== leader.user.avatarUrl
+    );
 
     const { mutate: toggleActive, isPending: togglingActive } = useMutation({
         mutationFn: (isActive: boolean) =>
@@ -124,12 +128,14 @@ function LeaderHeader({ leader }: { leader: Leader }) {
             <div className="p-6">
                 <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
                     <div className="flex items-center gap-4 min-w-0 w-full">
-                        {leader.user.avatarUrl ? (
+                        {hasAvatar ? (
                             <Image
-                                src={leader.user.avatarUrl}
+                                src={leader.user.avatarUrl!}
                                 alt={leader.user.fullName ?? ""}
                                 width={64}
                                 height={64}
+                                unoptimized
+                                onError={() => setFailedAvatarUrl(leader.user.avatarUrl ?? null)}
                                 className="h-16 w-16 rounded-2xl object-cover shrink-0 border border-border dark:border-white/10"
                             />
                         ) : (
