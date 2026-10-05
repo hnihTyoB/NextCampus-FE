@@ -11,6 +11,8 @@ import MetalCard from "@/components/ui/MetalCard";
 import Spinner from "@/components/ui/Spinner";
 import Modal from "@/components/ui/Modal";
 
+import { toast } from "react-hot-toast";
+
 const COLUMNS =
     "minmax(180px,1.4fr) minmax(200px,1.4fr) minmax(130px,1fr) minmax(130px,1fr) 110px 180px";
 
@@ -27,7 +29,21 @@ export default function PendingInternsTable() {
             { id: appId, payload: { status } },
             {
                 onSuccess: () => {
+                    toast.success(
+                        status === "APPROVED"
+                            ? t("admin.onboarding.approveSuccess")
+                            : t("admin.onboarding.rejectSuccess")
+                    );
                     onClose?.();
+                },
+                onError: (err: any) => {
+                    const apiMsg = err?.response?.data?.message;
+                    toast.error(
+                        apiMsg ||
+                            (status === "APPROVED"
+                                ? t("admin.onboarding.approveError")
+                                : t("admin.onboarding.rejectError"))
+                    );
                 },
             }
         );

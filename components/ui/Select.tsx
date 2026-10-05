@@ -8,6 +8,7 @@ import React, {
   type ReactNode,
 } from "react";
 import { ChevronDown, Check, Search, AlertCircle } from "lucide-react";
+import { useLocale } from "next-intl";
 
 export interface SelectOption {
   value: string;
@@ -22,6 +23,8 @@ export interface SelectProps {
   error?: string;
   helperText?: string;
   placeholder?: string;
+  searchPlaceholder?: string;
+  emptyText?: string;
   options: SelectOption[];
   value?: string;
   onChange?: (value: string) => void;
@@ -36,7 +39,9 @@ export default function Select({
   required,
   error,
   helperText,
-  placeholder = "Chọn một tùy chọn...",
+  placeholder,
+  searchPlaceholder,
+  emptyText,
   options,
   value,
   onChange,
@@ -45,6 +50,16 @@ export default function Select({
   className = "",
   containerClassName = "",
 }: SelectProps) {
+  const locale = useLocale();
+  const activePlaceholder =
+    placeholder ?? (locale === "vi" ? "Chọn một tùy chọn..." : "Select an option...");
+  const activeSearchPlaceholder =
+    searchPlaceholder ?? (locale === "vi" ? "Tìm kiếm..." : "Search...");
+  const activeEmptyText =
+    emptyText ??
+    (locale === "vi"
+      ? "Không tìm thấy kết quả phù hợp"
+      : "No matching results found");
   const generatedId = useId();
   const selectId = generatedId;
   const [isOpen, setIsOpen] = useState(false);
@@ -103,7 +118,7 @@ export default function Select({
   return (
     <div
       ref={containerRef}
-      className={`relative w-full flex flex-col gap-1.5 ${containerClassName}`}
+      className={`relative w-full flex flex-col gap-1.5 ${isOpen ? "z-50" : "z-10"} ${containerClassName}`}
     >
       {label && (
         <label
@@ -152,7 +167,7 @@ export default function Select({
               <span className="truncate">{selectedOption.label}</span>
             </>
           ) : (
-            <span className="text-muted/60 truncate">{placeholder}</span>
+            <span className="text-muted/60 truncate">{activePlaceholder}</span>
           )}
         </span>
 
@@ -167,19 +182,19 @@ export default function Select({
       {isOpen && (
         <div
           role="listbox"
-          aria-label={label || placeholder}
+          aria-label={label || activePlaceholder}
           className="
-            absolute top-full left-0 right-0 mt-2 z-50
+            absolute top-full left-0 right-0 mt-2 z-[60]
             rounded-2xl border border-border
-            bg-[#0c1222]/95 dark:bg-[#0c1222]/95
-            p-1.5 shadow-[0_16px_40px_rgba(0,0,0,0.5)]
+            bg-white/95 dark:bg-[#0c1222]/95
+            p-1.5 shadow-[0_16px_40px_rgba(0,0,0,0.15)] dark:shadow-[0_16px_40px_rgba(0,0,0,0.5)]
             backdrop-blur-2xl
             animate-fadeIn
           "
         >
           {/* Optional Search */}
           {searchable && (
-            <div className="p-1.5 pb-2 border-b border-white/10 mb-1">
+            <div className="p-1.5 pb-2 border-b border-border dark:border-white/10 mb-1">
               <div className="relative flex items-center">
                 <Search className="absolute left-2.5 h-3.5 w-3.5 text-muted pointer-events-none" />
                 <input
@@ -187,8 +202,8 @@ export default function Select({
                   type="text"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  placeholder="Tìm kiếm..."
-                  className="w-full rounded-lg bg-white/5 border border-white/10 pl-8 pr-3 py-1.5 text-xs text-foreground placeholder:text-muted/60 outline-none focus:border-primary-light/50"
+                  placeholder={activeSearchPlaceholder}
+                  className="w-full rounded-lg bg-slate-100/80 dark:bg-white/5 border border-border dark:border-white/10 pl-8 pr-3 py-1.5 text-xs text-foreground placeholder:text-muted/60 outline-none focus:border-primary-light/50"
                 />
               </div>
             </div>
@@ -198,7 +213,7 @@ export default function Select({
           <div className="max-h-60 overflow-y-auto custom-scrollbar flex flex-col gap-0.5">
             {filteredOptions.length === 0 ? (
               <div className="px-3 py-4 text-xs text-center text-muted">
-                Không tìm thấy kết quả phù hợp
+                {activeEmptyText}
               </div>
             ) : (
               filteredOptions.map((option) => {
@@ -221,8 +236,8 @@ export default function Select({
                       focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-light
                       ${
                         isSelected
-                          ? "bg-primary-main/20 text-white font-semibold"
-                          : "text-slate-300 hover:bg-white/5 hover:text-white"
+                          ? "bg-primary-main/10 dark:bg-primary-main/20 text-primary-main dark:text-cyan-300 font-semibold"
+                          : "text-foreground/90 hover:bg-slate-100 dark:hover:bg-white/5 hover:text-foreground"
                       }
                     `}
                   >

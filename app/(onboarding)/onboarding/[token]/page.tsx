@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useState, useRef, useTransition } from "react";
+import { useEffect, useState, useRef, useTransition, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import axios from "axios";
 import toast from "react-hot-toast";
+import { useTranslations } from "next-intl";
 import {
   Sparkles,
   User,
@@ -15,8 +16,6 @@ import {
   GraduationCap,
   BookOpen,
   Clock,
-  FileUp,
-  FileText,
   CheckCircle2,
   AlertCircle,
   X,
@@ -41,11 +40,13 @@ import Spinner from "@/components/ui/Spinner";
 import Button from "@/components/ui/Button";
 import Select from "@/components/ui/Select";
 import { DatePicker } from "@/components/ui/DatePicker";
+import FileUpload, { type UploadedFileItem } from "@/components/ui/FileUpload";
+import DOMPurify from "isomorphic-dompurify";
 
 const BUSINESS_TIME_ZONE = "Asia/Ho_Chi_Minh";
-const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024; // 10MB
-const ALLOWED_EXTENSIONS = [".pdf", ".doc", ".docx"];
-const VIETNAMESE_PHONE_REGEX = /^(0[3|5|7|8|9])[0-9]{8}$/;
+const MAX_CV_FILES = 3;
+const ALLOWED_EXTENSIONS = [".pdf", ".doc", ".docx", ".png", ".jpg", ".jpeg", ".webp"];
+const VIETNAMESE_PHONE_REGEX = /^(0[35789])[0-9]{8}$/;
 
 const POPULAR_UNIVERSITIES = [
   "Đại học Bách Khoa - ĐHQG TP.HCM",
@@ -57,7 +58,7 @@ const POPULAR_UNIVERSITIES = [
   "Đại học Ngoại thương (FTU)",
   "Đại học Sư phạm Kỹ thuật TP.HCM (HCMUTE)",
   "Đại học FPT",
-  "Học viện Bưu chính Viễn thông (PTIT)",
+  "Học viện Công nghệ Bưu chính Viễn thông (PTIT)",
   "Đại học Công nghiệp TP.HCM (IUH)",
   "Đại học Tôn Đức Thắng (TDTU)",
   "Đại học Cần Thơ",
@@ -93,44 +94,53 @@ function parseDateOnly(value: string): Date | null {
   return date;
 }
 
-const formSchema = z.object({
-  fullName: z.string().trim().min(2, "Họ và tên phải có ít nhất 2 ký tự").max(100, "Tối đa 100 ký tự"),
-  email: z.string().email("Email không hợp lệ"),
-  phone: z.string().trim().regex(VIETNAMESE_PHONE_REGEX, "Số điện thoại không đúng định dạng Việt Nam (10 chữ số)"),
-  university: z.string().trim().min(2, "Vui lòng nhập hoặc chọn trường đại học"),
-  major: z.string().trim().optional(),
-  preferredDepartment: z.string().min(1, "Vui lòng chọn phòng ban mong muốn"),
-  preferredPosition: z.string().min(1, "Vui lòng chọn vị trí mong muốn"),
-  startDate: z
-    .string()
-    .min(1, "Vui lòng chọn ngày bắt đầu thực tập")
-    .refine((value) => parseDateOnly(value) !== null, {
-      message: "Định dạng ngày không hợp lệ (YYYY-MM-DD)",
-    })
-    .refine(
-      (value) => {
-        const d = parseDateOnly(value);
-        return !d || value >= getBusinessToday();
-      },
-      { message: "Ngày bắt đầu không được trong quá khứ" }
-    )
-    .refine((value) => {
-      const date = parseDateOnly(value);
-      return !date || ![0, 6].includes(date.getUTCDay());
-    }, "Ngày bắt đầu không được là Thứ Bảy hoặc Chủ Nhật"),
-  duration: z
-    .number({ message: "Thời gian phải là số nguyên" })
-    .int("Thời gian phải là số nguyên")
-    .min(1, "Tối thiểu 1 tháng")
-    .max(12, "Tối đa 12 tháng"),
-  acceptedRegulations: z.boolean().refine((val) => val === true, {
-    message: "Bạn bắt buộc phải đồng ý với nội quy thực tập để nộp đơn",
-  }),
-});
+const buildFormSchema = (t: (key: string, values?: Record<string, string | number>) => string) =>
+  z.object({
+    fullName: z
+      .string()
+      .trim()
+      .min(2, t("errFullNameRequired"))
+      .max(100, t("errFullNameMax")),
+    email: z.string().email(t("errEmail")),
+    phone: z
+      .string()
+      .trim()
+      .min(1, t("errPhoneRequired"))
+      .regex(VIETNAMESE_PHONE_REGEX, t("errPhoneInvalid")),
+    university: z.string().trim().min(2, t("errUniversityRequired")),
+    major: z.string().trim().optional(),
+    preferredDepartment: z.string().min(1, t("errDepartmentRequired")),
+    preferredPosition: z.string().min(1, t("errPositionRequired")),
+    startDate: z
+      .string()
+      .min(1, t("errStartDateRequired"))
+      .refine((value) => parseDateOnly(value) !== null, {
+        message: t("errStartDateRequired"),
+      })
+      .refine(
+        (value) => {
+          const d = parseDateOnly(value);
+          return !d || value >= getBusinessToday();
+        },
+        { message: t("errStartDatePast") }
+      )
+      .refine((value) => {
+        const date = parseDateOnly(value);
+        return !date || ![0, 6].includes(date.getUTCDay());
+      }, t("errStartDateWeekend")),
+    duration: z
+      .number({ message: t("errDurationMin") })
+      .int()
+      .min(1, t("errDurationMin"))
+      .max(12, t("errDurationMax")),
+    acceptedRegulations: z.boolean().refine((val) => val === true, {
+      message: t("errRegulationsRequired"),
+    }),
+  });
 
-type FormValues = z.infer<typeof formSchema>;
+type FormValues = z.infer<ReturnType<typeof buildFormSchema>>;
 
-interface UploadedCvInfo {
+interface UploadedCvInfo extends UploadedFileItem {
   fileName: string;
   filePath: string;
   mimeType: string;
@@ -139,6 +149,7 @@ interface UploadedCvInfo {
 }
 
 export default function OnboardingPage() {
+  const t = useTranslations("candidateOnboarding");
   const params = useParams<{ token: string }>();
   const router = useRouter();
   const token = params?.token ?? "";
@@ -149,10 +160,10 @@ export default function OnboardingPage() {
   const [inviteEmail, setInviteEmail] = useState("");
 
   // Upload CV state
-  const [cvFile, setCvFile] = useState<UploadedCvInfo | null>(null);
+  const [cvFiles, setCvFiles] = useState<UploadedCvInfo[]>([]);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploadStatusText, setUploadStatusText] = useState("");
 
   // Regulation modal state
   const [regulationContent, setRegulationContent] = useState<string | null>(null);
@@ -169,6 +180,9 @@ export default function OnboardingPage() {
   // Submission state
   const [, startTransition] = useTransition();
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Dynamic Zod schema based on current locale translations
+  const formSchema = useMemo(() => buildFormSchema(t), [t]);
 
   const {
     register,
@@ -198,7 +212,7 @@ export default function OnboardingPage() {
   // Step 1: Verify token on mount
   useEffect(() => {
     if (!token) {
-      setVerificationError("Mã lời mời không tồn tại hoặc đường dẫn không hợp lệ.");
+      setVerificationError(t("errTokenInvalid"));
       setIsVerifying(false);
       return;
     }
@@ -211,19 +225,19 @@ export default function OnboardingPage() {
           setValue("email", res.data.email);
           setVerificationError(null);
         } else {
-          setVerificationError("Lời mời không hợp lệ hoặc đã được sử dụng.");
+          setVerificationError(t("errTokenDefault"));
         }
       })
       .catch((err: unknown) => {
-        let errorMsg = "Lời mời không hợp lệ hoặc đã hết hạn.";
+        let errorMsg = t("errTokenDefault");
         if (axios.isAxiosError(err)) {
           const code = err.response?.data?.code || err.response?.data?.errorCode;
           if (code === "TOKEN_USED") {
-            errorMsg = "Liên kết lời mời này đã được sử dụng để nộp hồ sơ trước đó.";
+            errorMsg = t("errTokenUsed");
           } else if (code === "TOKEN_EXPIRED") {
-            errorMsg = "Liên kết lời mời này đã hết hạn (quá 7 ngày).";
+            errorMsg = t("errTokenExpired");
           } else if (code === "TOKEN_REVOKED") {
-            errorMsg = "Liên kết lời mời này đã bị hủy bỏ bởi Quản trị viên.";
+            errorMsg = t("errTokenRevoked");
           } else if (err.response?.data?.message) {
             errorMsg = err.response.data.message;
           }
@@ -233,7 +247,7 @@ export default function OnboardingPage() {
       .finally(() => {
         setIsVerifying(false);
       });
-  }, [token, setValue]);
+  }, [token, setValue, t]);
 
   // Close university dropdown on outside click
   useEffect(() => {
@@ -260,80 +274,88 @@ export default function OnboardingPage() {
         setRegulationId(res.data.id);
       }
     } catch {
-      toast.error("Không thể tải nội dung quy định thực tập.");
+      toast.error(t("loadRegulationsError"));
     } finally {
       setIsLoadingRegulation(false);
     }
   };
 
   // Upload CV handler directly to Cloudflare R2
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const ext = "." + file.name.split(".").pop()?.toLowerCase();
-    if (!ALLOWED_EXTENSIONS.includes(ext)) {
-      toast.error("Chỉ chấp nhận file định dạng .pdf, .doc, .docx");
-      if (fileInputRef.current) fileInputRef.current.value = "";
-      return;
-    }
-
-    if (file.size > MAX_FILE_SIZE_BYTES) {
-      toast.error("Dung lượng file tối đa là 10MB");
-      if (fileInputRef.current) fileInputRef.current.value = "";
-      return;
-    }
+  const handleUploadFiles = async (files: File[]) => {
+    if (files.length === 0) return;
 
     setIsUploading(true);
     setUploadProgress(0);
 
+    const uploadedResults: UploadedCvInfo[] = [];
+
     try {
-      // 1. Get presigned upload URL from Backend v2
-      const urlRes = await getApplicationAttachmentPutUrl(token, file.name, file.type || "application/pdf");
-      const { uploadUrl, key, publicUrl } = urlRes.data;
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        setUploadStatusText(
+          t("uploadStatus", {
+            current: i + 1,
+            total: files.length,
+            name: file.name,
+          })
+        );
 
-      // 2. Upload directly to Cloudflare R2 via HTTP PUT with progress tracking
-      await axios.put(uploadUrl, file, {
-        headers: {
-          "Content-Type": file.type || "application/octet-stream",
-        },
-        onUploadProgress: (progressEvent) => {
-          const total = progressEvent.total || file.size;
-          const percent = Math.round((progressEvent.loaded * 100) / total);
-          setUploadProgress(percent);
-        },
-      });
+        // 1. Get presigned upload URL from Backend v2
+        const urlRes = await getApplicationAttachmentPutUrl(
+          token,
+          file.name,
+          file.type || "application/pdf"
+        );
+        const { uploadUrl, key, publicUrl } = urlRes.data;
 
-      setCvFile({
-        fileName: file.name,
-        filePath: key || urlRes.data.fileKey,
-        mimeType: file.type || "application/pdf",
-        fileSize: file.size,
-        publicUrl: publicUrl || uploadUrl.split("?")[0],
-      });
+        // 2. Upload directly to Cloudflare R2 via HTTP PUT with progress tracking
+        await axios.put(uploadUrl, file, {
+          headers: {
+            "Content-Type": file.type || "application/octet-stream",
+          },
+          onUploadProgress: (progressEvent) => {
+            const total = progressEvent.total || file.size;
+            const currentFilePercent = Math.round((progressEvent.loaded * 100) / total);
+            const overallPercent = Math.round(
+              ((i + currentFilePercent / 100) / files.length) * 100
+            );
+            setUploadProgress(overallPercent);
+          },
+        });
 
-      toast.success("Tải lên CV thành công!");
+        uploadedResults.push({
+          fileName: file.name,
+          filePath: key || urlRes.data.fileKey,
+          mimeType: file.type || "application/pdf",
+          fileSize: file.size,
+          publicUrl: publicUrl || uploadUrl.split("?")[0],
+        });
+      }
+
+      setCvFiles((prev) => [...prev, ...uploadedResults]);
+      toast.success(
+        files.length === 1
+          ? t("uploadSuccess")
+          : t("uploadSuccessCount", { count: files.length })
+      );
     } catch (err: unknown) {
-      console.error("[Onboarding] Upload CV error:", err);
-      toast.error("Tải lên CV thất bại. Vui lòng thử lại!");
-      setCvFile(null);
+      console.error("[Onboarding] Upload files error:", err);
+      toast.error(t("uploadError"));
     } finally {
       setIsUploading(false);
+      setUploadProgress(0);
+      setUploadStatusText("");
     }
   };
 
-  const handleRemoveCv = () => {
-    setCvFile(null);
-    setUploadProgress(0);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
+  const handleRemoveCv = (indexToRemove: number) => {
+    setCvFiles((prev) => prev.filter((_, idx) => idx !== indexToRemove));
   };
 
   // Submit Application
   const onSubmit = async (values: FormValues) => {
-    if (!cvFile) {
-      toast.error("Vui lòng tải lên CV của bạn trước khi nộp hồ sơ");
+    if (cvFiles.length === 0) {
+      toast.error(t("errAtLeastOneFile"));
       return;
     }
 
@@ -352,27 +374,25 @@ export default function OnboardingPage() {
         token,
         acceptedRegulations: values.acceptedRegulations,
         regulationId,
-        cvUrl: cvFile.publicUrl,
-        uploadedFiles: [
-          {
-            fileName: cvFile.fileName,
-            filePath: cvFile.filePath,
-            mimeType: cvFile.mimeType,
-            fileSize: cvFile.fileSize,
-          },
-        ],
+        cvUrl: cvFiles[0].publicUrl,
+        uploadedFiles: cvFiles.map((f) => ({
+          fileName: f.fileName,
+          filePath: f.filePath,
+          mimeType: f.mimeType,
+          fileSize: f.fileSize,
+        })),
       };
 
       const res = await createApplicationService(payload);
       if (res.success) {
-        toast.success("Nộp hồ sơ ứng tuyển thành công!");
+        toast.success(t("submitSuccess"));
         startTransition(() => {
           router.push(`/onboarding/${token}/success`);
         });
       }
     } catch (err: unknown) {
       console.error("[Onboarding] Submit error:", err);
-      let errorMsg = "Có lỗi xảy ra khi nộp hồ sơ. Vui lòng thử lại!";
+      let errorMsg = t("submitError");
       if (axios.isAxiosError(err) && err.response?.data?.message) {
         errorMsg = err.response.data.message;
       }
@@ -385,10 +405,10 @@ export default function OnboardingPage() {
   // Render: Loading token verification
   if (isVerifying) {
     return (
-      <div className="flex min-h-screen w-full items-center justify-center p-4">
-        <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-[#0B1020]/80 px-6 py-4 text-slate-300 shadow-2xl backdrop-blur-xl">
+      <div className="flex min-h-[70vh] w-full items-center justify-center p-4">
+        <div className="flex items-center gap-3 rounded-2xl border border-border bg-card/90 px-6 py-4 text-foreground shadow-2xl backdrop-blur-xl">
           <Spinner size="sm" />
-          <span className="text-sm font-medium">Đang xác thực liên kết lời mời...</span>
+          <span className="text-sm font-medium">{t("verifying")}</span>
         </div>
       </div>
     );
@@ -397,17 +417,17 @@ export default function OnboardingPage() {
   // Render: Token Invalid / Expired / Used
   if (verificationError) {
     return (
-      <div className="flex min-h-screen w-full items-center justify-center p-4">
-        <MetalCard className="max-w-md w-full p-6 text-center border-red-500/20 shadow-[0_0_40px_rgba(239,68,68,0.15)]">
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-red-500/10 border border-red-500/30">
-            <AlertCircle className="h-8 w-8 text-red-400" />
+      <div className="flex min-h-[70vh] w-full items-center justify-center p-4">
+        <MetalCard className="max-w-md w-full p-6 sm:p-8 text-center border-rose-500/20 shadow-lg">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-500 dark:text-rose-400">
+            <AlertCircle className="h-8 w-8" />
           </div>
-          <h2 className="mt-5 text-xl font-bold text-white">Liên kết không khả dụng</h2>
-          <p className="mt-2 text-sm text-slate-400 leading-relaxed">{verificationError}</p>
-          <div className="mt-6 rounded-xl border border-white/5 bg-white/[0.03] p-4 text-xs text-slate-400 text-left space-y-1">
-            <p className="font-semibold text-slate-300">Gợi ý xử lý:</p>
-            <p>• Nếu bạn đã nộp hồ sơ, vui lòng kiểm tra hộp thư email để nhận kết quả phê duyệt.</p>
-            <p>• Nếu liên kết bị hết hạn, vui lòng liên hệ bộ phận Tuyển dụng để được cấp liên kết mới.</p>
+          <h2 className="mt-5 text-xl font-bold text-foreground">{t("linkUnavailable")}</h2>
+          <p className="mt-2 text-sm text-muted leading-relaxed">{verificationError}</p>
+          <div className="mt-6 rounded-xl border border-border bg-slate-50 dark:bg-white/[0.03] p-4 text-xs text-muted text-left space-y-1.5">
+            <p className="font-semibold text-foreground">{t("troubleshootTitle")}</p>
+            <p>{t("troubleshootSubmitted")}</p>
+            <p>{t("troubleshootExpired")}</p>
           </div>
         </MetalCard>
       </div>
@@ -423,56 +443,52 @@ export default function OnboardingPage() {
   );
 
   return (
-    <div className="w-full max-w-4xl px-4 py-12 mx-auto space-y-6">
+    <div className="w-full max-w-4xl px-4 py-8 sm:py-12 mx-auto space-y-6">
       {/* Header with standard icon and heading alignment */}
       <MetalCard className="p-6 md:p-8">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <div className="flex items-center gap-2">
-              <Sparkles className="w-5 h-5 shrink-0 text-cyan-400" />
+              <Sparkles className="w-5 h-5 shrink-0 text-primary-light" />
               <h1 className="text-2xl font-bold metal-text md:text-3xl">
-                Hồ Sơ Tiếp Nhận Ứng Viên
+                {t("pageTitle")}
               </h1>
             </div>
-            <p className="mt-2 text-sm text-slate-400 max-w-2xl leading-relaxed">
-              Chào mừng bạn đến với chương trình Thực tập sinh tại NexCampus. Vui lòng hoàn tất biểu mẫu thông tin và đính kèm CV để chúng tôi chuẩn bị lộ trình tốt nhất cho bạn.
+            <p className="mt-2 text-sm text-muted max-w-2xl leading-relaxed">
+              {t("pageSubtitle")}
             </p>
-          </div>
-
-          <div className="rounded-xl border border-cyan-400/30 bg-cyan-500/10 px-4 py-2 text-xs font-semibold text-cyan-300 shrink-0 self-start sm:self-center">
-            NexCampus Onboarding v2
           </div>
         </div>
       </MetalCard>
 
       {/* Main Application Form */}
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-        <MetalCard className="p-6 md:p-8 space-y-6">
-          <div className="border-b border-white/10 pb-3">
-            <h2 className="text-base font-semibold text-white uppercase tracking-wider text-xs">
-              1. Thông tin cá nhân & Liên hệ
+        <MetalCard className={`p-6 md:p-8 space-y-6 overflow-visible relative transition-all ${showUniDropdown ? "z-40" : "z-30"}`}>
+          <div className="border-b border-border pb-3">
+            <h2 className="text-base font-semibold text-foreground uppercase tracking-wider text-xs">
+              {t("section1Title")}
             </h2>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             {/* Full Name */}
             <div>
-              <label className="mb-1.5 block text-xs font-medium text-slate-300">
-                Họ và tên đầy đủ <span className="text-rose-400">*</span>
+              <label className="mb-1.5 block text-xs sm:text-sm font-medium text-foreground/90 select-none flex items-center gap-1">
+                {t("fullName")} <span className="text-danger font-bold">*</span>
               </label>
               <div className="relative">
-                <User className="absolute left-3.5 top-3.5 h-4 w-4 text-slate-500 shrink-0" />
+                <User className="absolute left-3.5 top-3.5 h-4 w-4 text-muted/70 shrink-0" />
                 <input
                   type="text"
-                  placeholder="Nguyễn Văn A"
+                  placeholder={t("fullNamePlaceholder")}
                   {...register("fullName")}
-                  className={`w-full rounded-xl border bg-white/5 py-2.5 pl-10 pr-4 text-sm text-white outline-none transition placeholder:text-slate-600 focus:border-cyan-400/50 ${
-                    errors.fullName ? "border-rose-500/50" : "border-white/10"
+                  className={`w-full rounded-xl border bg-slate-50/80 dark:bg-white/5 py-2.5 pl-10 pr-4 text-sm text-foreground outline-none transition placeholder:text-muted/60 focus:border-primary-light/50 ${
+                    errors.fullName ? "border-danger focus:border-danger" : "border-border dark:border-white/10"
                   }`}
                 />
               </div>
               {errors.fullName && (
-                <p className="mt-1 text-xs text-rose-400 flex items-center gap-1">
+                <p className="mt-1.5 text-xs text-danger flex items-center gap-1.5">
                   <AlertCircle className="w-3.5 h-3.5 shrink-0" /> {errors.fullName.message}
                 </p>
               )}
@@ -480,57 +496,57 @@ export default function OnboardingPage() {
 
             {/* Email (Readonly from invite) */}
             <div>
-              <label className="mb-1.5 block text-xs font-medium text-slate-300">
-                Email nhận thư mời <span className="text-rose-400">*</span>
+              <label className="mb-1.5 block text-xs sm:text-sm font-medium text-foreground/90 select-none flex items-center gap-1">
+                {t("email")} <span className="text-danger font-bold">*</span>
               </label>
               <div className="relative">
-                <Mail className="absolute left-3.5 top-3.5 h-4 w-4 text-slate-500 shrink-0" />
+                <Mail className="absolute left-3.5 top-3.5 h-4 w-4 text-muted/70 shrink-0" />
                 <input
                   type="email"
                   value={inviteEmail}
                   readOnly
                   disabled
-                  className="w-full rounded-xl border border-white/10 bg-white/[0.02] py-2.5 pl-10 pr-4 text-sm text-slate-400 cursor-not-allowed outline-none"
+                  className="w-full rounded-xl border border-border dark:border-white/10 bg-slate-100/70 dark:bg-white/[0.02] py-2.5 pl-10 pr-4 text-sm text-muted cursor-not-allowed outline-none"
                 />
               </div>
-              <p className="mt-1 text-[11px] text-slate-500">
-                Email được đồng bộ chính xác từ lời mời tuyển dụng.
+              <p className="mt-1 text-[11px] text-muted">
+                {t("emailNote")}
               </p>
             </div>
 
             {/* Phone Number */}
             <div>
-              <label className="mb-1.5 block text-xs font-medium text-slate-300">
-                Số điện thoại (Việt Nam) <span className="text-rose-400">*</span>
+              <label className="mb-1.5 block text-xs sm:text-sm font-medium text-foreground/90 select-none flex items-center gap-1">
+                {t("phone")} <span className="text-danger font-bold">*</span>
               </label>
               <div className="relative">
-                <Phone className="absolute left-3.5 top-3.5 h-4 w-4 text-slate-500 shrink-0" />
+                <Phone className="absolute left-3.5 top-3.5 h-4 w-4 text-muted/70 shrink-0" />
                 <input
                   type="tel"
-                  placeholder="0987654321"
+                  placeholder={t("phonePlaceholder")}
                   {...register("phone")}
-                  className={`w-full rounded-xl border bg-white/5 py-2.5 pl-10 pr-4 text-sm text-white outline-none transition placeholder:text-slate-600 focus:border-cyan-400/50 ${
-                    errors.phone ? "border-rose-500/50" : "border-white/10"
+                  className={`w-full rounded-xl border bg-slate-50/80 dark:bg-white/5 py-2.5 pl-10 pr-4 text-sm text-foreground outline-none transition placeholder:text-muted/60 focus:border-primary-light/50 ${
+                    errors.phone ? "border-danger focus:border-danger" : "border-border dark:border-white/10"
                   }`}
                 />
               </div>
               {errors.phone && (
-                <p className="mt-1 text-xs text-rose-400 flex items-center gap-1">
+                <p className="mt-1.5 text-xs text-danger flex items-center gap-1.5">
                   <AlertCircle className="w-3.5 h-3.5 shrink-0" /> {errors.phone.message}
                 </p>
               )}
             </div>
 
             {/* University (Searchable Dropdown) */}
-            <div className="relative" ref={uniContainerRef}>
-              <label className="mb-1.5 block text-xs font-medium text-slate-300">
-                Trường Đại học / Cao đẳng <span className="text-rose-400">*</span>
+            <div className={`relative ${showUniDropdown ? "z-50" : "z-10"}`} ref={uniContainerRef}>
+              <label className="mb-1.5 block text-xs sm:text-sm font-medium text-foreground/90 select-none flex items-center gap-1">
+                {t("university")} <span className="text-danger font-bold">*</span>
               </label>
               <div className="relative">
-                <GraduationCap className="absolute left-3.5 top-3.5 h-4 w-4 text-slate-500 shrink-0" />
+                <GraduationCap className="absolute left-3.5 top-3.5 h-4 w-4 text-muted/70 shrink-0" />
                 <input
                   type="text"
-                  placeholder="Tìm hoặc nhập tên trường..."
+                  placeholder={t("universityPlaceholder")}
                   value={selectedUniversity}
                   onChange={(e) => {
                     setValue("university", e.target.value, { shouldValidate: true });
@@ -541,20 +557,20 @@ export default function OnboardingPage() {
                     setUniSearch(selectedUniversity || "");
                     setShowUniDropdown(true);
                   }}
-                  className={`w-full rounded-xl border bg-white/5 py-2.5 pl-10 pr-4 text-sm text-white outline-none transition placeholder:text-slate-600 focus:border-cyan-400/50 ${
-                    errors.university ? "border-rose-500/50" : "border-white/10"
+                  className={`w-full rounded-xl border bg-slate-50/80 dark:bg-white/5 py-2.5 pl-10 pr-4 text-sm text-foreground outline-none transition placeholder:text-muted/60 focus:border-primary-light/50 ${
+                    errors.university ? "border-danger focus:border-danger" : "border-border dark:border-white/10"
                   }`}
                 />
               </div>
 
               {showUniDropdown && (
-                <div className="absolute left-0 right-0 top-full z-50 mt-1 max-h-60 overflow-y-auto rounded-xl border border-white/10 bg-[#0B1020]/95 p-1 shadow-2xl backdrop-blur-xl scrollbar-thin scrollbar-thumb-white/10">
-                  <div className="px-3 py-2 text-[11px] font-semibold text-slate-400 border-b border-white/5 flex items-center gap-2">
-                    <Search className="h-3 w-3" /> Gợi ý trường phổ biến:
+                <div className="absolute left-0 right-0 top-full z-[60] mt-1 max-h-60 overflow-y-auto rounded-xl border border-border bg-white/95 dark:bg-[#0B1020]/95 p-1 shadow-2xl backdrop-blur-xl scrollbar-dropdown">
+                  <div className="px-3 py-2 text-[11px] font-semibold text-muted border-b border-border dark:border-white/5 flex items-center gap-2">
+                    <Search className="h-3 w-3" /> {t("suggestedUnis")}
                   </div>
                   {filteredUnis.length === 0 ? (
-                    <div className="p-3 text-xs text-slate-400">
-                      Sử dụng tên: &quot;<span className="text-white font-medium">{uniSearch}</span>&quot;
+                    <div className="p-3 text-xs text-muted">
+                      {t("useCustomUni", { name: uniSearch })}
                     </div>
                   ) : (
                     filteredUnis.map((uni) => (
@@ -565,12 +581,14 @@ export default function OnboardingPage() {
                           setValue("university", uni, { shouldValidate: true });
                           setShowUniDropdown(false);
                         }}
-                        className={`flex w-full items-center justify-between px-3 py-2 text-left text-xs rounded-lg transition hover:bg-white/10 ${
-                          selectedUniversity === uni ? "bg-cyan-500/10 text-cyan-300 font-medium" : "text-slate-300"
+                        className={`flex w-full items-center justify-between px-3 py-2 text-left text-xs rounded-lg transition hover:bg-slate-100 dark:hover:bg-white/10 ${
+                          selectedUniversity === uni
+                            ? "bg-cyan-500/10 text-cyan-600 dark:text-cyan-300 font-medium"
+                            : "text-foreground"
                         }`}
                       >
                         <span className="truncate">{uni}</span>
-                        {selectedUniversity === uni && <Check className="h-3.5 w-3.5 shrink-0" />}
+                        {selectedUniversity === uni && <Check className="h-3.5 w-3.5 shrink-0 text-cyan-600 dark:text-cyan-400" />}
                       </button>
                     ))
                   )}
@@ -578,7 +596,7 @@ export default function OnboardingPage() {
               )}
 
               {errors.university && (
-                <p className="mt-1 text-xs text-rose-400 flex items-center gap-1">
+                <p className="mt-1.5 text-xs text-danger flex items-center gap-1.5">
                   <AlertCircle className="w-3.5 h-3.5 shrink-0" /> {errors.university.message}
                 </p>
               )}
@@ -586,16 +604,16 @@ export default function OnboardingPage() {
 
             {/* Major */}
             <div className="md:col-span-2">
-              <label className="mb-1.5 block text-xs font-medium text-slate-300">
-                Chuyên ngành đào tạo
+              <label className="mb-1.5 block text-xs sm:text-sm font-medium text-foreground/90 select-none flex items-center gap-1">
+                {t("major")}
               </label>
               <div className="relative">
-                <BookOpen className="absolute left-3.5 top-3.5 h-4 w-4 text-slate-500 shrink-0" />
+                <BookOpen className="absolute left-3.5 top-3.5 h-4 w-4 text-muted/70 shrink-0" />
                 <input
                   type="text"
-                  placeholder="Ví dụ: Khoa học máy tính, Kỹ thuật phần mềm, Marketing..."
+                  placeholder={t("majorPlaceholder")}
                   {...register("major")}
-                  className="w-full rounded-xl border border-white/10 bg-white/5 py-2.5 pl-10 pr-4 text-sm text-white outline-none transition placeholder:text-slate-600 focus:border-cyan-400/50"
+                  className="w-full rounded-xl border border-border dark:border-white/10 bg-slate-50/80 dark:bg-white/5 py-2.5 pl-10 pr-4 text-sm text-foreground outline-none transition placeholder:text-muted/60 focus:border-primary-light/50"
                 />
               </div>
             </div>
@@ -603,20 +621,20 @@ export default function OnboardingPage() {
         </MetalCard>
 
         {/* Section 2: Preferred Department & Position */}
-        <MetalCard className="p-6 md:p-8 space-y-6">
-          <div className="border-b border-white/10 pb-3">
-            <h2 className="text-base font-semibold text-white uppercase tracking-wider text-xs">
-              2. Định hướng & Kế hoạch Thực tập
+        <MetalCard className="p-6 md:p-8 space-y-6 overflow-visible relative z-20">
+          <div className="border-b border-border pb-3">
+            <h2 className="text-base font-semibold text-foreground uppercase tracking-wider text-xs">
+              {t("section2Title")}
             </h2>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             {/* Preferred Department */}
             <Select
-              label="Phòng ban mong muốn"
+              label={t("preferredDepartment")}
               required
               error={errors.preferredDepartment?.message}
-              placeholder="-- Chọn phòng ban --"
+              placeholder={t("selectDepartmentPlaceholder")}
               value={selectedDepartment}
               options={APPLICATION_PREFERRED_DEPARTMENTS.map((dept) => ({
                 value: dept,
@@ -630,11 +648,11 @@ export default function OnboardingPage() {
 
             {/* Preferred Position */}
             <Select
-              label="Vị trí mong muốn"
+              label={t("preferredPosition")}
               required
               disabled={!selectedDepartment}
               error={errors.preferredPosition?.message}
-              placeholder={!selectedDepartment ? "-- Chọn phòng ban trước --" : "-- Chọn vị trí --"}
+              placeholder={!selectedDepartment ? t("selectDepartmentFirst") : t("selectPositionPlaceholder")}
               value={watch("preferredPosition")}
               options={positions.map((pos) => ({
                 value: pos,
@@ -648,7 +666,7 @@ export default function OnboardingPage() {
             {/* Start Date (Weekend + Past Date blocked) */}
             <div>
               <DatePicker
-                label="Ngày bắt đầu dự kiến"
+                label={t("startDate")}
                 required
                 value={watch("startDate")}
                 minDate={getBusinessToday()}
@@ -659,29 +677,29 @@ export default function OnboardingPage() {
                   setValue("startDate", "", { shouldValidate: true });
                 }}
                 error={errors.startDate?.message}
-                helperText="Lưu ý: Không được chọn ngày trong quá khứ và không chọn Thứ Bảy / Chủ Nhật."
+                helperText={t("startDateHelper")}
               />
             </div>
 
             {/* Duration */}
             <div>
-              <label className="mb-1.5 block text-xs font-medium text-slate-300">
-                Thời gian thực tập (tháng)
+              <label className="mb-1.5 block text-xs sm:text-sm font-medium text-foreground/90 select-none flex items-center gap-1">
+                {t("duration")}
               </label>
               <div className="relative">
-                <Clock className="absolute left-3.5 top-3.5 h-4 w-4 text-slate-500 shrink-0" />
+                <Clock className="absolute left-3.5 top-3.5 h-4 w-4 text-muted/70 shrink-0" />
                 <input
                   type="number"
                   min={1}
                   max={12}
                   {...register("duration", { valueAsNumber: true })}
-                  className={`w-full rounded-xl border bg-white/5 py-2.5 pl-10 pr-4 text-sm text-white outline-none transition focus:border-cyan-400/50 ${
-                    errors.duration ? "border-rose-500/50" : "border-white/10"
+                  className={`w-full rounded-xl border bg-slate-50/80 dark:bg-white/5 py-2.5 pl-10 pr-4 text-sm text-foreground outline-none transition focus:border-primary-light/50 ${
+                    errors.duration ? "border-danger focus:border-danger" : "border-border dark:border-white/10"
                   }`}
                 />
               </div>
               {errors.duration && (
-                <p className="mt-1 text-xs text-rose-400 flex items-center gap-1">
+                <p className="mt-1.5 text-xs text-danger flex items-center gap-1.5">
                   <AlertCircle className="w-3.5 h-3.5 shrink-0" /> {errors.duration.message}
                 </p>
               )}
@@ -689,116 +707,57 @@ export default function OnboardingPage() {
           </div>
         </MetalCard>
 
-        {/* Section 3: CV Upload directly to Cloudflare R2 */}
-        <MetalCard className="p-6 md:p-8 space-y-5">
-          <div className="border-b border-white/10 pb-3">
-            <h2 className="text-base font-semibold text-white uppercase tracking-wider text-xs">
-              3. Tải lên CV Ứng Tuyển
+        {/* Section 3: Document & CV Upload directly to Cloudflare R2 (Max 3 files) */}
+        <MetalCard className="p-6 md:p-8 space-y-5 relative z-10">
+          <div className="border-b border-border pb-3">
+            <h2 className="text-base font-semibold text-foreground uppercase tracking-wider text-xs">
+              {t("section3Title")}
             </h2>
           </div>
 
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".pdf,.doc,.docx"
-            onChange={handleFileUpload}
-            className="hidden"
+          <FileUpload
+            maxFiles={MAX_CV_FILES}
+            maxSizeMB={10}
+            accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.webp"
+            allowedExtensions={ALLOWED_EXTENSIONS}
+            files={cvFiles}
+            isUploading={isUploading}
+            uploadProgress={uploadProgress}
+            uploadStatusText={uploadStatusText}
+            disabled={isSubmitting}
+            onFilesSelected={handleUploadFiles}
+            onFileRemove={handleRemoveCv}
+            dropzoneTitle={
+              cvFiles.length === 0
+                ? t("dropzoneEmpty")
+                : t("dropzoneMore", { remaining: MAX_CV_FILES - cvFiles.length })
+            }
+            dropzoneSubtitle={t("dropzoneSubtitle")}
           />
-
-          {!cvFile && !isUploading && (
-            <div
-              onClick={() => fileInputRef.current?.click()}
-              className="group flex flex-col items-center justify-center p-8 rounded-2xl border-2 border-dashed border-white/15 bg-white/[0.02] hover:bg-white/[0.04] hover:border-cyan-400/50 transition cursor-pointer text-center"
-            >
-              <div className="h-12 w-12 rounded-2xl bg-cyan-500/10 border border-cyan-400/30 flex items-center justify-center text-cyan-300 group-hover:scale-110 transition duration-300">
-                <FileUp className="h-6 w-6" />
-              </div>
-              <p className="mt-3 text-sm font-semibold text-white">
-                Nhấp để chọn file hoặc kéo thả CV vào đây
-              </p>
-              <p className="mt-1 text-xs text-slate-400">
-                Hỗ trợ định dạng PDF, DOC, DOCX (Dung lượng tối đa 10MB)
-              </p>
-            </div>
-          )}
-
-          {/* Uploading progress bar */}
-          {isUploading && (
-            <div className="p-6 rounded-2xl border border-white/10 bg-white/[0.02] space-y-3">
-              <div className="flex items-center justify-between text-xs text-slate-300">
-                <span className="flex items-center gap-2">
-                  <Loader2 className="h-4 w-4 animate-spin text-cyan-400" />
-                  Đang tải CV trực tiếp lên máy chủ bảo mật R2...
-                </span>
-                <span className="font-bold text-cyan-300">{uploadProgress}%</span>
-              </div>
-              <div className="w-full bg-zinc-800 rounded-full h-2.5 overflow-hidden">
-                <div
-                  className="bg-gradient-to-r from-cyan-400 to-blue-500 h-2.5 rounded-full transition-all duration-300"
-                  style={{ width: `${uploadProgress}%` }}
-                />
-              </div>
-            </div>
-          )}
-
-          {/* Uploaded File preview */}
-          {cvFile && !isUploading && (
-            <div className="flex items-center justify-between p-4 rounded-xl border border-emerald-500/30 bg-emerald-500/10">
-              <div className="flex items-center gap-3 min-w-0">
-                <FileText className="h-6 w-6 text-emerald-400 shrink-0" />
-                <div className="min-w-0">
-                  <p className="text-sm font-semibold text-white truncate">
-                    {cvFile.fileName}
-                  </p>
-                  <p className="text-xs text-emerald-300/80">
-                    {(cvFile.fileSize / (1024 * 1024)).toFixed(2)} MB • Đã tải lên thành công
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2 shrink-0">
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="px-3 py-1.5 text-xs text-slate-300 hover:text-white rounded-lg border border-white/10 hover:bg-white/10 transition"
-                >
-                  Đổi file
-                </button>
-                <button
-                  type="button"
-                  onClick={handleRemoveCv}
-                  className="p-1.5 text-slate-400 hover:text-rose-400 transition rounded-lg hover:bg-rose-500/10"
-                  title="Xóa CV"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-            </div>
-          )}
         </MetalCard>
 
         {/* Section 4: Regulations acceptance */}
-        <MetalCard className="p-6 md:p-8 space-y-4">
+        <MetalCard className="p-6 md:p-8 space-y-4 relative z-0">
           <label className="flex items-start gap-3 cursor-pointer select-none">
             <input
               type="checkbox"
               {...register("acceptedRegulations")}
-              className="mt-1 h-4 w-4 rounded border-white/20 bg-white/10 text-cyan-500 accent-cyan-500 focus:ring-cyan-400/50"
+              className="mt-1 h-4 w-4 rounded border-border text-primary-light accent-primary-light focus:ring-primary-light/50 cursor-pointer"
             />
-            <div className="text-xs text-slate-300 leading-relaxed">
-              Tôi xác nhận thông tin cung cấp là hoàn toàn chính xác, đồng thời đã đọc và cam kết tuân thủ{" "}
+            <div className="text-xs text-muted leading-relaxed">
+              {t("agreementPrefix")}{" "}
               <button
                 type="button"
                 onClick={openRegulationModal}
-                className="text-cyan-400 hover:underline font-semibold"
+                className="text-primary-light hover:underline font-semibold"
               >
-                Nội quy Thực tập sinh của NexCampus
+                {t("regulationsLink")}
               </button>{" "}
-              <span className="text-rose-400">*</span>
+              <span className="text-danger font-bold">*</span>
             </div>
           </label>
           {errors.acceptedRegulations && (
-            <p className="text-xs text-rose-400 flex items-center gap-1">
+            <p className="text-xs text-danger flex items-center gap-1.5">
               <AlertCircle className="w-3.5 h-3.5 shrink-0" /> {errors.acceptedRegulations.message}
             </p>
           )}
@@ -810,18 +769,18 @@ export default function OnboardingPage() {
             type="submit"
             variant="primary"
             size="lg"
-            disabled={isSubmitting || isUploading || !cvFile}
+            disabled={isSubmitting || isUploading || cvFiles.length === 0}
             className="w-full sm:w-auto px-8 py-3.5 text-sm font-semibold shadow-[0_0_30px_rgba(21,174,245,0.3)] hover:shadow-[0_0_40px_rgba(21,174,245,0.5)]"
           >
             {isSubmitting ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Đang xử lý hồ sơ...
+                {t("submitting")}
               </>
             ) : (
               <>
                 <CheckCircle2 className="h-4 w-4 mr-2" />
-                Xác nhận nộp hồ sơ ứng tuyển
+                {t("submitButton")}
               </>
             )}
           </Button>
@@ -830,48 +789,51 @@ export default function OnboardingPage() {
 
       {/* Regulation Modal */}
       {showRegulationModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md p-4 animate-in fade-in duration-200">
-          <div className="max-w-2xl w-full max-h-[85vh] flex flex-col rounded-3xl border border-white/10 bg-[#0B1020] text-white shadow-2xl overflow-hidden">
-            <div className="flex items-center justify-between border-b border-white/10 px-6 py-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md p-4 animate-in fade-in duration-200">
+          <div className="max-w-2xl w-full max-h-[85vh] flex flex-col rounded-3xl border border-border dark:border-white/10 bg-white dark:bg-[#0B1020] text-foreground shadow-2xl overflow-hidden">
+            <div className="flex items-center justify-between border-b border-border dark:border-white/10 px-6 py-4">
               <div className="flex items-center gap-2">
-                <ShieldCheck className="h-5 w-5 text-cyan-400 shrink-0" />
+                <ShieldCheck className="h-5 w-5 text-primary-light shrink-0" />
                 <div>
-                  <h3 className="font-bold text-base">Nội Quy & Quy Định Thực Tập</h3>
+                  <h3 className="font-bold text-base text-foreground">{t("modalTitle")}</h3>
                   {regulationVersion && (
-                    <span className="text-[11px] text-cyan-300">Phiên bản {regulationVersion}</span>
+                    <span className="text-[11px] text-primary-light font-medium">
+                      {t("modalVersion", { version: regulationVersion })}
+                    </span>
                   )}
                 </div>
               </div>
               <button
+                type="button"
                 onClick={() => setShowRegulationModal(false)}
-                className="rounded-lg p-1.5 text-slate-400 hover:text-white hover:bg-white/10 transition"
+                className="rounded-lg p-1.5 text-muted hover:text-foreground hover:bg-slate-100 dark:hover:bg-white/10 transition cursor-pointer"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-6 text-sm text-slate-300 leading-relaxed space-y-4 scrollbar-thin scrollbar-thumb-white/10">
+            <div className="flex-1 overflow-y-auto p-6 text-sm text-foreground/90 leading-relaxed space-y-4 scrollbar-dropdown">
               {isLoadingRegulation ? (
                 <div className="flex h-40 items-center justify-center">
                   <Spinner size="md" />
                 </div>
               ) : regulationContent ? (
                 <div
-                  className="prose prose-invert max-w-none text-xs leading-relaxed"
-                  dangerouslySetInnerHTML={{ __html: regulationContent }}
+                  className="prose dark:prose-invert max-w-none text-xs leading-relaxed"
+                  dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(regulationContent) }}
                 />
               ) : (
-                <div className="space-y-3 text-xs">
-                  <p className="font-semibold text-white">Các quy định chung dành cho TTS:</p>
-                  <p>1. Nghiêm túc chấp hành thời gian làm việc và báo cáo tiến độ hàng ngày (Daily Report) đúng giờ.</p>
-                  <p>2. Bảo mật tuyệt đối mã nguồn, cơ sở dữ liệu và thông tin khách hàng của công ty.</p>
-                  <p>3. Tích cực tham gia các buổi đánh giá tuần (Weekly Evaluation) cùng người hướng dẫn.</p>
-                  <p>4. Tôn trọng đồng nghiệp và văn hóa làm việc minh bạch, cởi mở.</p>
+                <div className="space-y-3 text-xs text-muted">
+                  <p className="font-semibold text-foreground">{t("defaultRulesTitle")}</p>
+                  <p>{t("defaultRule1")}</p>
+                  <p>{t("defaultRule2")}</p>
+                  <p>{t("defaultRule3")}</p>
+                  <p>{t("defaultRule4")}</p>
                 </div>
               )}
             </div>
 
-            <div className="border-t border-white/10 px-6 py-4 flex justify-end">
+            <div className="border-t border-border dark:border-white/10 px-6 py-4 flex justify-end bg-slate-50/50 dark:bg-white/[0.02]">
               <Button
                 type="button"
                 variant="primary"
@@ -881,7 +843,7 @@ export default function OnboardingPage() {
                   setShowRegulationModal(false);
                 }}
               >
-                Tôi đã đọc & Đồng ý
+                {t("modalAgreeButton")}
               </Button>
             </div>
           </div>

@@ -31,10 +31,13 @@ export default function MetalCard({
               .join(" ")
         : "";
 
+    const hasExplicitOverflow = /(^|\s)(!?)overflow-(visible|hidden|auto|scroll)/.test(className);
+    const overflowClass = hasExplicitOverflow ? "" : "overflow-hidden";
+
     return (
         <div
             className={`
-                group relative overflow-hidden
+                group relative ${overflowClass}
                 rounded-[28px]
                 border border-slate-200 dark:border-white/10
                 bg-white dark:bg-[#0c1322]
@@ -46,78 +49,80 @@ export default function MetalCard({
                 ${className}
             `}
         >
-            {/* Metallic base - Dark Mode only */}
-            <div
-                className="
-                    hidden dark:block
-                    absolute inset-0
-                    bg-[linear-gradient(
-                        135deg,
-                        rgba(255,255,255,.10) 0%,
-                        rgba(255,255,255,.03) 18%,
-                        transparent 40%,
-                        rgba(255,255,255,.02) 70%,
-                        rgba(0,0,0,.25) 100%
-                    )]
-                "
-            />
+            {/* Decorative layers contained in clipped wrapper */}
+            <div className="absolute inset-0 overflow-hidden rounded-[28px] pointer-events-none">
+                {/* Metallic base - Dark Mode only */}
+                <div
+                    className="
+                        hidden dark:block
+                        absolute inset-0
+                        bg-[linear-gradient(
+                            135deg,
+                            rgba(255,255,255,.10) 0%,
+                            rgba(255,255,255,.03) 18%,
+                            transparent 40%,
+                            rgba(255,255,255,.02) 70%,
+                            rgba(0,0,0,.25) 100%
+                        )]
+                    "
+                />
 
-            {/* Chrome line top - Dark Mode only */}
-            <div
-                className="
-                    hidden dark:block
-                    absolute left-6 right-6 top-0 h-px
-                    bg-gradient-to-r
-                    from-transparent
-                    via-white/90
-                    to-transparent
-                "
-            />
+                {/* Chrome line top - Dark Mode only */}
+                <div
+                    className="
+                        hidden dark:block
+                        absolute left-6 right-6 top-0 h-px
+                        bg-gradient-to-r
+                        from-transparent
+                        via-white/90
+                        to-transparent
+                    "
+                />
 
-            {/* Blue edge glow */}
-            <div
-                className="
-                    absolute inset-0
-                    opacity-0
-                    transition-opacity
-                    duration-500
-                    group-hover:opacity-100
-                    bg-[radial-gradient(circle_at_top,rgba(21,174,245,.08),transparent_40%)]
-                "
-            />
+                {/* Blue edge glow */}
+                <div
+                    className="
+                        absolute inset-0
+                        opacity-0
+                        transition-opacity
+                        duration-500
+                        group-hover:opacity-100
+                        bg-[radial-gradient(circle_at_top,rgba(21,174,245,.08),transparent_40%)]
+                    "
+                />
 
-            {/* Metallic reflection - Dark Mode only */}
-            <div
-                className="
-                    hidden dark:block
-                    absolute
-                    -left-[40%]
-                    top-0
-                    h-full
-                    w-[30%]
-                    -skew-x-[20deg]
-                    bg-white/10
-                    blur-2xl
-                    opacity-0
-                    transition-all
-                    duration-1000
-                    group-hover:left-[130%]
-                    group-hover:opacity-100
-                "
-            />
+                {/* Metallic reflection - Dark Mode only */}
+                <div
+                    className="
+                        hidden dark:block
+                        absolute
+                        -left-[40%]
+                        top-0
+                        h-full
+                        w-[30%]
+                        -skew-x-[20deg]
+                        bg-white/10
+                        blur-2xl
+                        opacity-0
+                        transition-all
+                        duration-1000
+                        group-hover:left-[130%]
+                        group-hover:opacity-100
+                    "
+                />
 
-            {/* Inner border - Dark Mode only */}
-            <div
-                className="
-                    hidden dark:block
-                    absolute inset-[1px]
-                    rounded-[27px]
-                    border border-white/5
-                "
-            />
+                {/* Inner border - Dark Mode only */}
+                <div
+                    className="
+                        hidden dark:block
+                        absolute inset-[1px]
+                        rounded-[27px]
+                        border border-white/5
+                    "
+                />
+            </div>
 
             {/* Content */}
-
             <div className={`relative z-10 w-full min-w-0 max-w-full ${layoutClasses}`}>
                 {children}
             </div>

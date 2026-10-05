@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { createPortal } from "react-dom";
 import Image from "next/image";
 import { Link } from "@/i18n/navigation";
@@ -22,11 +22,10 @@ export default function Header({ role, onMenuClick }: HeaderProps) {
     const t = useTranslations();
     const { state } = useAuth();
     const { logoutMutate, isLoading } = useLogout();
-    const [avatarError, setAvatarError] = useState(false);
-
-    useEffect(() => {
-        setAvatarError(false);
-    }, [state.user?.avatarUrl]);
+    const [failedAvatarUrl, setFailedAvatarUrl] = useState<string | null>(null);
+    const hasAvatar = Boolean(
+        state.user?.avatarUrl && failedAvatarUrl !== state.user.avatarUrl
+    );
 
     const handleLogout = () => {
         logoutMutate();
@@ -77,14 +76,14 @@ export default function Header({ role, onMenuClick }: HeaderProps) {
             title={state.user?.fullName ?? "User"}
             className="flex items-center gap-2 md:gap-3 rounded-full border border-slate-200 bg-slate-100/80 hover:bg-slate-200/80 text-foreground dark:border-white/10 dark:bg-white/5 dark:hover:bg-white/10 p-1 md:px-3 md:py-2 backdrop-blur-lg transition cursor-pointer max-w-fit md:max-w-[260px] min-w-0"
           >
-            {state.user?.avatarUrl && !avatarError ? (
+            {hasAvatar ? (
               <Image
-                src={state.user.avatarUrl}
-                alt={state.user.fullName ?? "User"}
+                src={state.user!.avatarUrl!}
+                alt={state.user?.fullName ?? "User"}
                 width={40}
                 height={40}
                 unoptimized
-                onError={() => setAvatarError(true)}
+                onError={() => setFailedAvatarUrl(state.user?.avatarUrl ?? null)}
                 className="h-8 w-8 md:h-10 md:w-10 shrink-0 rounded-full object-cover"
               />
             ) : (

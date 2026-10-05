@@ -28,8 +28,9 @@ export default function AdminTeamHeader() {
             toast.success(t("admin.adminTeam.createSuccess"));
             queryClient.invalidateQueries({ queryKey: ["users"] });
         },
-        onError: () => {
-            toast.error(t("admin.adminTeam.createError"));
+        onError: (err: any) => {
+            const apiMsg = err?.response?.data?.message;
+            toast.error(apiMsg || t("admin.adminTeam.createError"));
         },
     });
 
@@ -64,7 +65,7 @@ export default function AdminTeamHeader() {
             <Modal.Window name="invite-admin" size="sm">
                 <InviteAdminForm
                     isPending={isPending}
-                    onSubmit={(data) => createAdmin(data)}
+                    onSubmit={(data, onSuccess) => createAdmin(data, { onSuccess })}
                 />
             </Modal.Window>
         </Modal>
@@ -77,7 +78,7 @@ function InviteAdminForm({
     onCloseModal,
 }: {
     isPending: boolean;
-    onSubmit: (data: FormValues) => void;
+    onSubmit: (data: FormValues, onSuccess: () => void) => void;
     onCloseModal?: () => void;
 }) {
     const t = useTranslations();
@@ -106,8 +107,7 @@ function InviteAdminForm({
 
             <form
                 onSubmit={handleSubmit((data) => {
-                    onSubmit(data);
-                    onCloseModal?.();
+                    onSubmit(data, () => onCloseModal?.());
                 })}
                 className="mt-6 space-y-4 text-left"
             >
