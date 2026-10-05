@@ -5,19 +5,19 @@ import { Plus } from "lucide-react";
 import type { Meeting } from "@/types/meeting";
 
 const HOSTED_COLORS: Record<string, string> = {
-  SCHEDULED: "bg-sky-500/20 text-sky-300 border-l-sky-400 hover:bg-sky-500/30",
-  ONGOING: "bg-emerald-500/20 text-emerald-300 border-l-emerald-400 hover:bg-emerald-500/30",
-  COMPLETED: "bg-violet-500/20 text-violet-300 border-l-violet-400 hover:bg-violet-500/30",
-  CANCELLED: "bg-rose-500/20 text-rose-300 border-l-rose-400 hover:bg-rose-500/30",
-  DRAFT: "bg-slate-500/20 text-slate-300 border-l-slate-400 hover:bg-slate-500/30",
+  SCHEDULED: "bg-sky-100 text-sky-700 border-l-sky-500 hover:bg-sky-200/70 dark:bg-sky-500/20 dark:text-sky-300 dark:border-l-sky-400 dark:hover:bg-sky-500/30",
+  ONGOING: "bg-emerald-100 text-emerald-700 border-l-emerald-500 hover:bg-emerald-200/70 dark:bg-emerald-500/20 dark:text-emerald-300 dark:border-l-emerald-400 dark:hover:bg-emerald-500/30",
+  COMPLETED: "bg-violet-100 text-violet-700 border-l-violet-500 hover:bg-violet-200/70 dark:bg-violet-500/20 dark:text-violet-300 dark:border-l-violet-400 dark:hover:bg-violet-500/30",
+  CANCELLED: "bg-rose-100 text-rose-700 border-l-rose-500 hover:bg-rose-200/70 dark:bg-rose-500/20 dark:text-rose-300 dark:border-l-rose-400 dark:hover:bg-rose-500/30",
+  DRAFT: "bg-slate-100 text-slate-700 border-l-slate-400 hover:bg-slate-200/70 dark:bg-slate-500/20 dark:text-slate-300 dark:border-l-slate-400 dark:hover:bg-slate-500/30",
 };
 
 const INVITED_COLORS: Record<string, string> = {
-  SCHEDULED: "bg-amber-500/15 text-amber-300 border-l-amber-400 hover:bg-amber-500/25",
-  ONGOING: "bg-orange-500/15 text-orange-300 border-l-orange-400 hover:bg-orange-500/25",
-  COMPLETED: "bg-teal-500/15 text-teal-300 border-l-teal-400 hover:bg-teal-500/25",
-  CANCELLED: "bg-rose-500/20 text-rose-300 border-l-rose-400 hover:bg-rose-500/30",
-  DRAFT: "bg-stone-500/15 text-stone-300 border-l-stone-400 hover:bg-stone-500/25",
+  SCHEDULED: "bg-amber-100 text-amber-700 border-l-amber-500 hover:bg-amber-200/70 dark:bg-amber-500/15 dark:text-amber-300 dark:border-l-amber-400 dark:hover:bg-amber-500/25",
+  ONGOING: "bg-orange-100 text-orange-700 border-l-orange-500 hover:bg-orange-200/70 dark:bg-orange-500/15 dark:text-orange-300 dark:border-l-orange-400 dark:hover:bg-orange-500/25",
+  COMPLETED: "bg-teal-100 text-teal-700 border-l-teal-500 hover:bg-teal-200/70 dark:bg-teal-500/15 dark:text-teal-300 dark:border-l-teal-400 dark:hover:bg-teal-500/25",
+  CANCELLED: "bg-rose-100 text-rose-700 border-l-rose-500 hover:bg-rose-200/70 dark:bg-rose-500/20 dark:text-rose-300 dark:border-l-rose-400 dark:hover:bg-rose-500/30",
+  DRAFT: "bg-stone-100 text-stone-700 border-l-stone-400 hover:bg-stone-200/70 dark:bg-stone-500/15 dark:text-stone-300 dark:border-l-stone-400 dark:hover:bg-stone-500/25",
 };
 
 interface Props {
@@ -81,7 +81,7 @@ export default function MeetingCalendarDay({
                 e.stopPropagation();
                 onScheduleClick();
               }}
-              className="flex h-5 w-5 items-center justify-center rounded-md text-muted opacity-0 group-hover/day:opacity-100 transition hover:bg-cyan-500/20 hover:text-cyan-300"
+              className="flex h-5 w-5 items-center justify-center rounded-md text-muted opacity-0 group-hover/day:opacity-100 transition hover:bg-cyan-100 hover:text-cyan-700 dark:hover:bg-cyan-500/20 dark:hover:text-cyan-300"
               title={t("scheduleTooltip")}
             >
               <Plus className="h-3.5 w-3.5 shrink-0" />

@@ -138,7 +138,7 @@
       "threadIdHelp": "Discord Private Thread ID to route notifications directly into this thread.",
       "roleIdLabel": "Discord Role ID to tag (Optional)",
       "roleIdPlaceholder": "e.g., 123456789012345678",
-      "roleIdHelp": "The system will mention this role (<@&roleId>) on critical notifications.",
+      "roleIdHelp": "The system will mention this role (@&roleId) on critical notifications.",
       "isEnabledLabel": "Enable this Webhook",
       "cancelButton": "Cancel",
       "saveButton": "Save Configuration",

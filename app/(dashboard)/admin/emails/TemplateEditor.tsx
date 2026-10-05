@@ -685,7 +685,7 @@ function TemplateEditorInner({
                   </div>
                   <div className="flex items-center gap-2 text-muted">
                     <span className="font-semibold w-14 shrink-0">
-                      {t("admin.emails.senderInfo").split(":")[0]}:
+                      {t("admin.emails.sender")}:
                     </span>
                     <span>NexCampus System &lt;no-reply@nexcampus.vn&gt;</span>
                   </div>

@@ -7,6 +7,7 @@ import { useTranslations } from "next-intl";
 import { toast } from "react-hot-toast";
 import MetalCard from "@/components/ui/MetalCard";
 import Badge from "@/components/ui/Badge";
+import { useIsMutating } from "@tanstack/react-query";
 import { useDiscordBotStatus, useProvisionAllDepartments } from "@/hooks/discord";
 import { useRBAC } from "@/hooks/rbac/useRBAC";
 
@@ -24,6 +25,9 @@ export default function DiscordHeader({
   const canManage = can("DISCORD_MANAGE");
   const { data: botStatus, isLoading: isBotLoading } = useDiscordBotStatus();
   const provisionAllMutation = useProvisionAllDepartments();
+  const isSyncingAnyDept =
+    useIsMutating({ mutationKey: ["discord", "provision-department"] }) > 0;
+  const isProvisioning = provisionAllMutation.isPending || isSyncingAnyDept;
 
   const handleProvisionAll = async () => {
     try {
@@ -53,9 +57,6 @@ export default function DiscordHeader({
                   <h1 className="text-2xl font-bold metal-text">
                     {t("title")}
                   </h1>
-                  <Badge variant="purple" size="sm" pulse>
-                    {t("badge")}
-                  </Badge>
 
                   {/* Discord Bot Status Live Indicator */}
                   {isBotLoading ? (
@@ -96,7 +97,7 @@ export default function DiscordHeader({
               <button
                 type="button"
                 onClick={handleProvisionAll}
-                disabled={provisionAllMutation.isPending}
+                disabled={isProvisioning}
                 title={t("provisionAll")}
                 className="
                   group inline-flex items-center justify-center gap-2

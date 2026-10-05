@@ -307,10 +307,10 @@ export default function CreateMeetingModal({ onCloseModal, defaultDate }: Props)
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col">
       {/* Sticky Header (Rule 44 Compliant: Icon + Heading inside a dedicated flex container) */}
-      <div className="sticky top-0 z-20 bg-[#0c1222]/95 backdrop-blur-xl pb-3 sm:pb-4 pt-1 -mt-1 border-b border-white/10 pr-9 sm:pr-12">
+      <div className="sticky top-0 z-20 bg-white/95 dark:bg-[#0c1222]/95 backdrop-blur-xl pb-3 sm:pb-4 pt-1 -mt-1 border-b border-border dark:border-white/10 pr-9 sm:pr-12">
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="flex h-10 w-10 sm:h-11 sm:w-11 shrink-0 items-center justify-center rounded-xl sm:rounded-2xl bg-cyan-500/15 border border-cyan-500/30 text-cyan-300 shadow-[0_0_12px_rgba(6,182,212,0.2)]">
+            <div className="flex h-10 w-10 sm:h-11 sm:w-11 shrink-0 items-center justify-center rounded-xl sm:rounded-2xl border border-cyan-300 bg-cyan-100/80 text-cyan-700 dark:border-cyan-400/30 dark:bg-cyan-500/10 dark:text-cyan-300 shadow-sm dark:shadow-[0_0_12px_rgba(6,182,212,0.2)]">
               <Calendar className="h-5 w-5 shrink-0" />
             </div>
             <div className="min-w-0">
@@ -333,12 +333,12 @@ export default function CreateMeetingModal({ onCloseModal, defaultDate }: Props)
           </div>
 
           {/* Host Badge */}
-          <div className="hidden sm:flex items-center gap-2 rounded-xl border border-white/10 bg-card/40 px-3 py-1.5 text-xs text-muted shrink-0">
-            <User className="h-3.5 w-3.5 shrink-0 text-cyan-400" />
+          <div className="hidden sm:flex items-center gap-2 rounded-xl border border-border dark:border-white/10 bg-card/60 dark:bg-card/40 px-3 py-1.5 text-xs text-muted shrink-0">
+            <User className="h-3.5 w-3.5 shrink-0 text-cyan-600 dark:text-cyan-400" />
             <span className="font-medium text-foreground max-w-[140px] truncate">
               {currentUser?.fullName || currentUser?.email}
             </span>
-            <span className="rounded bg-cyan-500/15 text-cyan-300 px-1.5 py-0.5 text-[10px] font-semibold border border-cyan-500/20">
+            <span className="rounded border border-cyan-300 bg-cyan-100/80 text-cyan-700 dark:border-cyan-500/20 dark:bg-cyan-500/15 dark:text-cyan-300 px-1.5 py-0.5 text-[10px] font-semibold">
               {t("admin.meetings.roleHost")}
             </span>
           </div>
@@ -376,8 +376,8 @@ export default function CreateMeetingModal({ onCloseModal, defaultDate }: Props)
                     text-xs font-semibold transition-all duration-200 cursor-pointer select-none
                     ${
                       isSelected
-                        ? "border-cyan-400/80 bg-cyan-500/15 text-cyan-300 shadow-[0_0_12px_rgba(6,182,212,0.25)] ring-1 ring-cyan-400/40"
-                        : "border-border/70 dark:border-white/10 bg-card/60 dark:bg-white/[0.03] text-muted hover:text-foreground hover:border-white/20 hover:bg-card-hover"
+                        ? "border-cyan-500/70 bg-cyan-50 text-cyan-700 shadow-sm ring-1 ring-cyan-500/30 dark:border-cyan-400/80 dark:bg-cyan-500/15 dark:text-cyan-300 dark:shadow-[0_0_12px_rgba(6,182,212,0.25)] dark:ring-cyan-400/40"
+                        : "border-border/70 dark:border-white/10 bg-card/60 dark:bg-white/[0.03] text-muted hover:text-foreground hover:border-border-strong dark:hover:border-white/20 hover:bg-card-hover"
                     }
                   `}
                 >
@@ -389,7 +389,7 @@ export default function CreateMeetingModal({ onCloseModal, defaultDate }: Props)
                   />
                   <IconComponent
                     className={`h-4 w-4 shrink-0 transition-colors ${
-                      isSelected ? "text-cyan-400" : "text-muted group-hover:text-foreground"
+                      isSelected ? "text-cyan-600 dark:text-cyan-400" : "text-muted group-hover:text-foreground"
                     }`}
                   />
                   <span className="truncate">{label}</span>
@@ -437,7 +437,7 @@ export default function CreateMeetingModal({ onCloseModal, defaultDate }: Props)
               label={t("admin.meetings.formMeetingLink")}
               required
               type="url"
-              leftIcon={<Video className="h-4 w-4 text-cyan-400" />}
+              leftIcon={<Video className="h-4 w-4 text-cyan-600 dark:text-cyan-400" />}
               placeholder={t("admin.meetings.linkPlaceholder")}
               error={errors.meetingLink?.message}
               {...register("meetingLink")}
@@ -451,7 +451,7 @@ export default function CreateMeetingModal({ onCloseModal, defaultDate }: Props)
             <Input
               label={t("admin.meetings.formLocation")}
               type="text"
-              leftIcon={<MapPin className="h-4 w-4 text-cyan-400" />}
+              leftIcon={<MapPin className="h-4 w-4 text-cyan-600 dark:text-cyan-400" />}
               placeholder={t("admin.meetings.locationPlaceholder")}
               error={errors.location?.message}
               {...register("location")}
@@ -528,8 +528,8 @@ export default function CreateMeetingModal({ onCloseModal, defaultDate }: Props)
                     text-xs font-semibold transition-all duration-200 cursor-pointer select-none
                     ${
                       isSelected
-                        ? "border-cyan-400/80 bg-cyan-500/15 text-cyan-300 shadow-[0_0_12px_rgba(6,182,212,0.25)] ring-1 ring-cyan-400/40"
-                        : "border-border/70 dark:border-white/10 bg-card/60 dark:bg-white/[0.03] text-muted hover:text-foreground hover:border-white/20 hover:bg-card-hover"
+                        ? "border-cyan-500/70 bg-cyan-50 text-cyan-700 shadow-sm ring-1 ring-cyan-500/30 dark:border-cyan-400/80 dark:bg-cyan-500/15 dark:text-cyan-300 dark:shadow-[0_0_12px_rgba(6,182,212,0.25)] dark:ring-cyan-400/40"
+                        : "border-border/70 dark:border-white/10 bg-card/60 dark:bg-white/[0.03] text-muted hover:text-foreground hover:border-border-strong dark:hover:border-white/20 hover:bg-card-hover"
                     }
                   `}
                 >
@@ -541,7 +541,7 @@ export default function CreateMeetingModal({ onCloseModal, defaultDate }: Props)
                   />
                   <IconComponent
                     className={`h-4 w-4 shrink-0 transition-colors ${
-                      isSelected ? "text-cyan-400" : "text-muted group-hover:text-foreground"
+                      isSelected ? "text-cyan-600 dark:text-cyan-400" : "text-muted group-hover:text-foreground"
                     }`}
                   />
                   <span className="truncate">{label}</span>
@@ -568,8 +568,8 @@ export default function CreateMeetingModal({ onCloseModal, defaultDate }: Props)
                     text-xs font-semibold transition-all duration-200 cursor-pointer select-none
                     ${
                       isSelected
-                        ? "border-cyan-400/80 bg-cyan-500/15 text-cyan-300 shadow-[0_0_12px_rgba(6,182,212,0.25)] ring-1 ring-cyan-400/40"
-                        : "border-border/70 dark:border-white/10 bg-card/60 dark:bg-white/[0.03] text-muted hover:text-foreground hover:border-white/20 hover:bg-card-hover"
+                        ? "border-cyan-500/70 bg-cyan-50 text-cyan-700 shadow-sm ring-1 ring-cyan-500/30 dark:border-cyan-400/80 dark:bg-cyan-500/15 dark:text-cyan-300 dark:shadow-[0_0_12px_rgba(6,182,212,0.25)] dark:ring-cyan-400/40"
+                        : "border-border/70 dark:border-white/10 bg-card/60 dark:bg-white/[0.03] text-muted hover:text-foreground hover:border-border-strong dark:hover:border-white/20 hover:bg-card-hover"
                     }
                   `}
                 >
@@ -581,7 +581,7 @@ export default function CreateMeetingModal({ onCloseModal, defaultDate }: Props)
                   />
                   <IconComponent
                     className={`h-4 w-4 shrink-0 transition-colors ${
-                      isSelected ? "text-cyan-400" : "text-muted group-hover:text-foreground"
+                      isSelected ? "text-cyan-600 dark:text-cyan-400" : "text-muted group-hover:text-foreground"
                     }`}
                   />
                   <span className="truncate">{label}</span>
@@ -593,14 +593,14 @@ export default function CreateMeetingModal({ onCloseModal, defaultDate }: Props)
 
         {/* Leader Invitation (Only when Visibility === PRIVATE) */}
         {watchVisibility === "PRIVATE" && (
-          <div className="col-span-full rounded-xl sm:rounded-2xl border border-white/10 bg-card/30 dark:bg-white/[0.02] p-2.5 sm:p-4 shadow-glass backdrop-blur-md">
+          <div className="col-span-full rounded-xl sm:rounded-2xl border border-border dark:border-white/10 bg-card/40 dark:bg-white/[0.02] p-2.5 sm:p-4 shadow-glass backdrop-blur-md">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <label className="text-xs sm:text-sm font-semibold text-foreground/90 select-none flex items-center gap-2">
-                <Users className="h-4 w-4 shrink-0 text-cyan-400" />
+                <Users className="h-4 w-4 shrink-0 text-cyan-600 dark:text-cyan-400" />
                 <span>{t("admin.meetings.inviteLeaders")}</span>
                 <span className="text-danger font-bold">*</span>
                 {selectedLeaderIds.length > 0 && (
-                  <span className="ml-1 rounded-full bg-cyan-500/20 px-2 py-0.5 text-[11px] font-bold text-cyan-300 border border-cyan-500/30">
+                  <span className="ml-1 rounded-full border border-cyan-300 bg-cyan-100/80 text-cyan-700 dark:border-cyan-500/30 dark:bg-cyan-500/20 dark:text-cyan-300 px-2 py-0.5 text-[11px] font-bold">
                     {t(
                       selectedLeaderIds.length > 1
                         ? "admin.meetings.leadersSelectedPlural"
@@ -615,7 +615,7 @@ export default function CreateMeetingModal({ onCloseModal, defaultDate }: Props)
                 <button
                   type="button"
                   onClick={handleSelectAllLeaders}
-                  className="text-xs font-semibold text-cyan-400 hover:text-cyan-300 hover:underline transition self-start sm:self-auto cursor-pointer"
+                  className="text-xs font-semibold text-cyan-600 dark:text-cyan-400 hover:text-cyan-700 dark:hover:text-cyan-300 hover:underline transition self-start sm:self-auto cursor-pointer"
                 >
                   {selectedLeaderIds.length === leaders.length
                     ? t("admin.meetings.deselectAll")
@@ -633,7 +633,7 @@ export default function CreateMeetingModal({ onCloseModal, defaultDate }: Props)
                   value={leaderSearch}
                   onChange={(e) => setLeaderSearch(e.target.value)}
                   placeholder={t("admin.meetings.searchLeaders")}
-                  className="w-full rounded-xl bg-white/[0.04] border border-white/10 pl-9 pr-3 py-1.5 text-xs text-foreground placeholder:text-muted/60 outline-none transition focus:border-cyan-400/50"
+                  className="w-full rounded-xl bg-card dark:bg-white/[0.04] border border-border dark:border-white/10 pl-9 pr-3 py-1.5 text-xs text-foreground placeholder:text-muted outline-none transition focus:border-cyan-500 dark:focus:border-cyan-400/50"
                 />
               </div>
             )}
@@ -647,7 +647,7 @@ export default function CreateMeetingModal({ onCloseModal, defaultDate }: Props)
                 {t("admin.meetings.noLeadersAvailable")}
               </p>
             ) : (
-              <div className="mt-2.5 sm:mt-3 max-h-44 space-y-1.5 overflow-y-auto overscroll-contain rounded-xl border border-white/10 bg-card/60 dark:bg-white/[0.02] p-1.5 sm:p-2 no-scrollbar">
+              <div className="mt-2.5 sm:mt-3 max-h-44 space-y-1.5 overflow-y-auto overscroll-contain rounded-xl border border-border dark:border-white/10 bg-card/60 dark:bg-white/[0.02] p-1.5 sm:p-2 no-scrollbar">
                 {filteredLeaders.map((leader) => {
                   const isBusy = busyUserIds.has(leader.id);
                   const isSelected = selectedLeaderIds.includes(leader.id);
@@ -656,18 +656,18 @@ export default function CreateMeetingModal({ onCloseModal, defaultDate }: Props)
                       key={leader.id}
                       className={`flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2 transition-all select-none ${
                         isSelected
-                          ? "bg-cyan-500/15 border border-cyan-500/30 text-cyan-300 shadow-sm"
-                          : "hover:bg-card/80 dark:hover:bg-white/5 text-foreground/90 border border-transparent"
+                          ? "border border-cyan-300 bg-cyan-100/80 text-cyan-700 dark:border-cyan-500/30 dark:bg-cyan-500/15 dark:text-cyan-300 shadow-sm"
+                          : "hover:bg-card-hover dark:hover:bg-white/5 text-foreground/90 border border-transparent"
                       }`}
                     >
                       <input
                         type="checkbox"
                         checked={isSelected}
                         onChange={() => toggleLeader(leader.id)}
-                        className="rounded accent-cyan-500 h-4 w-4 cursor-pointer"
+                        className="rounded accent-cyan-600 dark:accent-cyan-500 h-4 w-4 cursor-pointer"
                       />
                       <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-cyan-950/70 border border-cyan-400/30 text-[11px] font-bold text-cyan-300">
+                        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-cyan-300 bg-cyan-100/80 text-[11px] font-bold text-cyan-700 dark:border-cyan-400/30 dark:bg-cyan-950/70 dark:text-cyan-300">
                           {(leader.fullName || leader.email).charAt(0).toUpperCase()}
                         </div>
                         <div className="min-w-0 flex-1">
@@ -682,7 +682,7 @@ export default function CreateMeetingModal({ onCloseModal, defaultDate }: Props)
                         </div>
                       </div>
                       {isBusy && (
-                        <span className="shrink-0 rounded-lg bg-rose-500/15 border border-rose-500/30 px-2 py-0.5 text-[10px] font-semibold text-rose-300 shadow-sm">
+                        <span className="shrink-0 rounded-lg border border-rose-300 bg-rose-100/80 text-rose-700 dark:border-rose-500/30 dark:bg-rose-500/15 dark:text-rose-300 px-2 py-0.5 text-[10px] font-semibold shadow-sm">
                           {t("admin.meetings.busy")}
                         </span>
                       )}
@@ -707,7 +707,7 @@ export default function CreateMeetingModal({ onCloseModal, defaultDate }: Props)
       </div>
 
       {/* Sticky Action Footer (Always pinned at bottom of modal viewport) */}
-      <div className="sticky bottom-0 z-20 bg-[#0c1222]/95 backdrop-blur-xl pt-3 pb-1 -mb-1 border-t border-white/10 flex items-center justify-end gap-2.5 sm:gap-3">
+      <div className="sticky bottom-0 z-20 bg-white/95 dark:bg-[#0c1222]/95 backdrop-blur-xl pt-3 pb-1 -mb-1 border-t border-border dark:border-white/10 flex items-center justify-end gap-2.5 sm:gap-3">
         <Button
           type="button"
           variant="secondary"
@@ -720,7 +720,7 @@ export default function CreateMeetingModal({ onCloseModal, defaultDate }: Props)
           type="submit"
           variant="primary"
           isLoading={createMeeting.isPending}
-          className="shadow-lg shadow-cyan-950/40"
+          className="shadow-sm dark:shadow-lg dark:shadow-cyan-950/40"
         >
           {t("admin.meetings.createMeeting")}
         </Button>

@@ -84,7 +84,7 @@ export default function AdminSettingsForm() {
         <div className="space-y-1">
           <p className="text-base font-semibold text-foreground">{t("loadError")}</p>
           <p className="text-xs text-muted max-w-md mx-auto">
-            Không thể kết nối đến dịch vụ cài đặt hệ thống. Vui lòng kiểm tra lại đường truyền mạng hoặc thử lại.
+            {t("loadErrorDesc")}
           </p>
         </div>
         <Button variant="primary" onClick={() => refetch()} className="mx-auto">
@@ -471,7 +471,7 @@ function AdminSettingsFields({
                 })}
               </div>
               <p className="text-xs text-muted mt-0.5">
-                Bấm vào mốc giờ để áp dụng nhanh hạn chốt nộp báo cáo.
+                {t("quickPresetsDeadlineHint")}
               </p>
             </div>
 
@@ -1062,17 +1062,17 @@ function AdminSettingsFields({
                         type="button"
                         onClick={handleCopyToken}
                         className="inline-flex items-center gap-1 text-[11px] text-indigo-400 hover:text-indigo-300 transition-colors px-1.5 py-0.5 rounded hover:bg-indigo-500/10"
-                        title="Copy Token"
+                        title={t("discordCopyToken")}
                       >
                         {copiedToken ? (
                           <>
                             <Check className="h-3 w-3 text-emerald-400" />
-                            <span className="text-emerald-400">Copied</span>
+                            <span className="text-emerald-400">{t("discordCopied")}</span>
                           </>
                         ) : (
                           <>
                             <Copy className="h-3 w-3" />
-                            <span>Copy</span>
+                            <span>{t("discordCopy")}</span>
                           </>
                         )}
                       </button>
@@ -1133,7 +1133,7 @@ function AdminSettingsFields({
       {/* 5. Subtitle Note */}
       <div className="flex items-center gap-2 text-xs text-muted pt-2">
         <Check className="h-4 w-4 text-emerald-400 shrink-0" />
-        <span>Hệ thống bảo đảm tự động kiểm tra tính hợp lệ trước khi cập nhật.</span>
+        <span>{t("validationGuaranteeNotice")}</span>
       </div>
 
       {/* 6. Reset Defaults Modal */}
