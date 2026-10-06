@@ -12,6 +12,7 @@ import {
   AlertTriangle,
   FileText,
   User,
+  Headphones,
 } from "lucide-react";
 import { useTranslations, useLocale } from "next-intl";
 import Spinner from "@/components/ui/Spinner";
@@ -208,6 +209,37 @@ export default function MeetingDetailModal({ meetingId, onCloseModal }: Props) {
               >
                 {meeting.meetingLink}
               </a>
+            </div>
+          )}
+
+          {meeting.discordVoiceLink && (
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 col-span-full pt-2 border-t border-white/5">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <Headphones className="h-4 w-4 shrink-0 text-indigo-400" />
+                <a
+                  href={meeting.discordVoiceLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="truncate text-indigo-400 hover:text-indigo-300 hover:underline transition font-medium"
+                >
+                  {t("joinDiscordVoice")}
+                </a>
+              </div>
+              <span
+                className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-semibold self-start sm:self-auto ${
+                  meeting.discordPermissionsResetAt
+                    ? "bg-slate-500/15 text-slate-300 border border-slate-500/30"
+                    : meeting.discordPermissionsGranted
+                      ? "bg-emerald-500/15 text-emerald-300 border border-emerald-500/30"
+                      : "bg-amber-500/15 text-amber-300 border border-amber-500/30"
+                }`}
+              >
+                {meeting.discordPermissionsResetAt
+                  ? t("discordRoomStatusReset")
+                  : meeting.discordPermissionsGranted
+                    ? t("discordRoomStatusGranted")
+                    : t("discordRoomStatusPending")}
+              </span>
             </div>
           )}
         </div>

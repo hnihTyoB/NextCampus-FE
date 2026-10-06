@@ -14,6 +14,8 @@ import {
   Check,
   X,
   ExternalLink,
+  Headphones,
+  ShieldCheck,
 } from "lucide-react";
 import { useTranslations, useLocale } from "next-intl";
 import Spinner from "@/components/ui/Spinner";
@@ -25,6 +27,8 @@ import { useReviewAbsence } from "@/hooks/meeting/useReviewAbsence";
 import { useAuth } from "@/hooks/auth/useAuth";
 import { useRsvpMeeting } from "@/hooks/meeting/useRsvpMeeting";
 import { useSubmitAbsence } from "@/hooks/meeting/useSubmitAbsence";
+import { useGrantDiscordPermissions } from "@/hooks/meeting/useGrantDiscordPermissions";
+import { useResetDiscordPermissions } from "@/hooks/meeting/useResetDiscordPermissions";
 import { useRBAC } from "@/hooks/rbac/useRBAC";
 
 interface Props {
@@ -64,6 +68,8 @@ export default function MeetingDetailModal({ meetingId, onCloseModal }: Props) {
   const reviewAbsence = useReviewAbsence();
   const rsvpMeeting = useRsvpMeeting();
   const submitAbsence = useSubmitAbsence();
+  const grantDiscord = useGrantDiscordPermissions();
+  const resetDiscord = useResetDiscordPermissions();
 
   const [confirmAction, setConfirmAction] = useState<"cancel" | null>(null);
   const [showLeaveForm, setShowLeaveForm] = useState(false);
@@ -212,6 +218,37 @@ export default function MeetingDetailModal({ meetingId, onCloseModal }: Props) {
               <span>{meeting.meetingLink}</span>
               <ExternalLink className="h-3.5 w-3.5 shrink-0" />
             </a>
+          </div>
+        )}
+        {meeting.discordVoiceLink && (
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-sm text-foreground pt-0.5">
+            <div className="flex items-center gap-3 min-w-0">
+              <Headphones className="h-4 w-4 shrink-0 text-indigo-400" />
+              <a
+                href={meeting.discordVoiceLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 text-indigo-400 hover:text-indigo-300 hover:underline font-medium truncate"
+              >
+                <span>{t("joinDiscordVoice")}</span>
+                <ExternalLink className="h-3.5 w-3.5 shrink-0" />
+              </a>
+            </div>
+            <span
+              className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-semibold self-start sm:self-auto ${
+                meeting.discordPermissionsResetAt
+                  ? "bg-slate-500/15 text-slate-300 border border-slate-500/30"
+                  : meeting.discordPermissionsGranted
+                    ? "bg-emerald-500/15 text-emerald-300 border border-emerald-500/30"
+                    : "bg-amber-500/15 text-amber-300 border border-amber-500/30"
+              }`}
+            >
+              {meeting.discordPermissionsResetAt
+                ? t("discordRoomStatusReset")
+                : meeting.discordPermissionsGranted
+                  ? t("discordRoomStatusGranted")
+                  : t("discordRoomStatusPending")}
+            </span>
           </div>
         )}
         <div className="flex items-center gap-3 text-sm text-foreground">
@@ -453,20 +490,56 @@ export default function MeetingDetailModal({ meetingId, onCloseModal }: Props) {
               </div>
             </div>
           ) : (
-            <div className="flex items-center justify-between">
-              <button
-                type="button"
-                onClick={() => setConfirmAction("cancel")}
-                disabled={updateMeeting.isPending}
-                className="flex items-center gap-1.5 text-xs text-rose-400 hover:text-rose-300 transition"
-              >
-                {updateMeeting.isPending ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                ) : (
-                  <XCircle className="h-3.5 w-3.5" />
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                {meeting.discordChannelId && isHostOrOrganizer && (
+                  !meeting.discordPermissionsGranted ? (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => grantDiscord.mutate(meeting.id)}
+                      disabled={grantDiscord.isPending}
+                      className="gap-1.5 text-indigo-400 hover:text-indigo-300"
+                    >
+                      {grantDiscord.isPending ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin shrink-0" />
+                      ) : (
+                        <ShieldCheck className="h-3.5 w-3.5 shrink-0" />
+                      )}
+                      <span>{t("grantDiscordPermissions")}</span>
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => resetDiscord.mutate(meeting.id)}
+                      disabled={resetDiscord.isPending}
+                      className="gap-1.5 text-amber-400 hover:text-amber-300"
+                    >
+                      {resetDiscord.isPending ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin shrink-0" />
+                      ) : (
+                        <Headphones className="h-3.5 w-3.5 shrink-0" />
+                      )}
+                      <span>{t("resetDiscordPermissions")}</span>
+                    </Button>
+                  )
                 )}
-                <span>{t("cancelMeeting")}</span>
-              </button>
+
+                <button
+                  type="button"
+                  onClick={() => setConfirmAction("cancel")}
+                  disabled={updateMeeting.isPending}
+                  className="flex items-center gap-1.5 text-xs text-rose-400 hover:text-rose-300 transition"
+                >
+                  {updateMeeting.isPending ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <XCircle className="h-3.5 w-3.5" />
+                  )}
+                  <span>{t("cancelMeeting")}</span>
+                </button>
+              </div>
               <Button size="sm" variant="ghost" type="button" onClick={onCloseModal}>
                 {t("cancel")}
               </Button>

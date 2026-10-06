@@ -56,6 +56,7 @@ const FACTORY_DEFAULTS = {
   DISCORD_BOT_TOKEN: "",
   DISCORD_GUILD_ID: "",
   DISCORD_INVITE_URL: "https://discord.gg/nexcampus",
+  DISCORD_MEETING_EMPTY_BUFFER_MINUTES: "5",
 };
 
 const DEADLINE_PRESETS = ["17:00", "17:30", "18:00", "18:30", "19:00"];
@@ -188,6 +189,10 @@ function AdminSettingsFields({
       typeof initialData.DISCORD_INVITE_URL === "string"
         ? initialData.DISCORD_INVITE_URL
         : FACTORY_DEFAULTS.DISCORD_INVITE_URL,
+    DISCORD_MEETING_EMPTY_BUFFER_MINUTES:
+      initialData.DISCORD_MEETING_EMPTY_BUFFER_MINUTES != null
+        ? String(initialData.DISCORD_MEETING_EMPTY_BUFFER_MINUTES)
+        : FACTORY_DEFAULTS.DISCORD_MEETING_EMPTY_BUFFER_MINUTES,
   }), [initialData]);
 
   const [formValues, setFormValues] = useState(initialValues);
@@ -307,6 +312,18 @@ function AdminSettingsFields({
       }
     }
 
+    const bufferStr = String(formValues.DISCORD_MEETING_EMPTY_BUFFER_MINUTES ?? "").trim();
+    const bufferNum = Number(bufferStr);
+    if (
+      !bufferStr ||
+      isNaN(bufferNum) ||
+      bufferNum < 0 ||
+      bufferNum > 120 ||
+      !Number.isInteger(bufferNum)
+    ) {
+      errs.DISCORD_MEETING_EMPTY_BUFFER_MINUTES = t("errors.discordBufferMinutesFormat");
+    }
+
     return errs;
   }, [formValues, t]);
 
@@ -342,6 +359,7 @@ function AdminSettingsFields({
       DISCORD_BOT_TOKEN: formValues.DISCORD_BOT_TOKEN.trim(),
       DISCORD_GUILD_ID: formValues.DISCORD_GUILD_ID.trim(),
       DISCORD_INVITE_URL: formValues.DISCORD_INVITE_URL.trim(),
+      DISCORD_MEETING_EMPTY_BUFFER_MINUTES: Number(formValues.DISCORD_MEETING_EMPTY_BUFFER_MINUTES),
     };
 
     batchUpdate.mutate(payload);
@@ -1005,18 +1023,35 @@ function AdminSettingsFields({
               </div>
             </div>
 
-            {/* Discord Server Invite URL */}
-            <div className="pt-2">
-              <Input
-                label={t("discordInviteUrlTitle")}
-                type="url"
-                placeholder={t("discordInviteUrlPlaceholder")}
-                value={formValues.DISCORD_INVITE_URL}
-                onChange={(e) => handleChange("DISCORD_INVITE_URL", e.target.value)}
-                disabled={batchUpdate.isPending}
-                error={errors.DISCORD_INVITE_URL}
-                helperText={t("discordInviteUrlDesc")}
-              />
+            {/* Discord Server Invite URL & Empty Meeting Room Buffer Minutes Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start pt-2">
+              <div>
+                <Input
+                  label={t("discordInviteUrlTitle")}
+                  type="url"
+                  placeholder={t("discordInviteUrlPlaceholder")}
+                  value={formValues.DISCORD_INVITE_URL}
+                  onChange={(e) => handleChange("DISCORD_INVITE_URL", e.target.value)}
+                  disabled={batchUpdate.isPending}
+                  error={errors.DISCORD_INVITE_URL}
+                  helperText={t("discordInviteUrlDesc")}
+                />
+              </div>
+              <div>
+                <Input
+                  label={t("discordMeetingEmptyBufferTitle")}
+                  type="number"
+                  min={0}
+                  max={120}
+                  step={1}
+                  placeholder={t("discordMeetingEmptyBufferPlaceholder")}
+                  value={formValues.DISCORD_MEETING_EMPTY_BUFFER_MINUTES}
+                  onChange={(e) => handleChange("DISCORD_MEETING_EMPTY_BUFFER_MINUTES", e.target.value)}
+                  disabled={batchUpdate.isPending}
+                  error={errors.DISCORD_MEETING_EMPTY_BUFFER_MINUTES}
+                  helperText={t("discordMeetingEmptyBufferDesc")}
+                />
+              </div>
             </div>
 
             {/* Server ID & Bot Token Grid */}
