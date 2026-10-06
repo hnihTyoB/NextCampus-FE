@@ -74,7 +74,12 @@
       "noFilterResults": "Không tìm thấy nhóm công việc nào phù hợp với bộ lọc.",
       "resetFilter": "Đặt lại bộ lọc",
       "reload": "Làm mới dữ liệu",
-      "activeFiltersCount": "({count} bộ lọc đang chọn)"
+      "activeFiltersCount": "({count} bộ lọc đang chọn)",
+      "memberSelectorTitle": "Thành viên Task Group",
+      "selectedCount": "Đã chọn {count}",
+      "loadingInterns": "Đang tải danh sách TTS...",
+      "noInternsFound": "Không có TTS active phù hợp với leader/phòng ban đã chọn.",
+      "aiConstraintNote": "AI chỉ được phép phân công những TTS được chọn tại đây."
     }
   },
   "taskGroups": {

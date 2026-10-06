@@ -11,6 +11,7 @@ import {
   Loader2,
 } from "lucide-react";
 import type { TaskGroup } from "@/types/task-group";
+import { getTaskGroupMemberId, getTaskGroupMemberName } from "@/types/task-group";
 import Modal from "@/components/ui/Modal";
 import MetalCard from "@/components/ui/MetalCard";
 import TaskGroupQuotaAllocationModal from "@/components/task-group/TaskGroupQuotaAllocationModal";
@@ -100,14 +101,19 @@ export default function TaskGroupCard({ group }: TaskGroupCardProps) {
 
             {members.length > 0 ? (
               <div className="flex flex-wrap gap-1.5">
-                {members.slice(0, 4).map((member) => (
-                  <span
-                    key={member.internId}
-                    className="inline-flex items-center rounded-lg bg-card/80 border border-border px-2 py-0.5 text-xs text-foreground/80 shadow-xs"
-                  >
-                    {member.intern.fullName}
-                  </span>
-                ))}
+                {members.slice(0, 4).map((member, idx) => {
+                  const memberId =
+                    getTaskGroupMemberId(member) || `member-${idx}`;
+                  const memberName = getTaskGroupMemberName(member);
+                  return (
+                    <span
+                      key={memberId}
+                      className="inline-flex items-center rounded-lg bg-card/80 border border-border px-2 py-0.5 text-xs text-foreground/80 shadow-xs"
+                    >
+                      {memberName}
+                    </span>
+                  );
+                })}
                 {members.length > 4 && (
                   <span className="inline-flex items-center rounded-lg bg-card/60 px-2 py-0.5 text-xs text-muted">
                     +{members.length - 4}

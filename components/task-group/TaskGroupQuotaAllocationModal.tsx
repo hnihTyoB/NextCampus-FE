@@ -16,7 +16,7 @@ import {
 import { toast } from "react-hot-toast";
 import type { TaskGroup, TaskGroupTask } from "@/types/task-group";
 import { useTaskGroupTasks } from "@/hooks/task-group/useTaskGroupTasks";
-import { taskAssignmentService } from "@/services/task-assignment.service";
+import { useAssignTask } from "@/hooks/task-assignment/useAssignTask";
 
 interface TaskGroupQuotaAllocationModalProps {
   taskGroup: TaskGroup;
@@ -31,6 +31,7 @@ export default function TaskGroupQuotaAllocationModal({
 }: TaskGroupQuotaAllocationModalProps) {
   const t = useTranslations();
   const queryClient = useQueryClient();
+  const assignTaskMutation = useAssignTask();
 
   const { data: tasksData, isLoading: loadingTasks } = useTaskGroupTasks(
     taskGroup.id,
@@ -38,7 +39,10 @@ export default function TaskGroupQuotaAllocationModal({
   const tasks = useMemo(() => tasksData?.data ?? [], [tasksData]);
 
   const members = useMemo(
-    () => taskGroup.members ?? [],
+    () =>
+      (taskGroup.members ?? []).filter((m) =>
+        Boolean(m.internId || m.userId || m.user?.id),
+      ),
     [taskGroup.members],
   );
 
@@ -72,9 +76,13 @@ export default function TaskGroupQuotaAllocationModal({
     if (mode === "equal") {
       unassignedTasks.forEach((task, index) => {
         const member = members[index % members.length];
+        const memberId =
+          member.internId || member.userId || member.user?.id || "";
+        const memberName =
+          member.intern?.fullName || member.user?.fullName || "—";
         assignments.push({
-          internId: member.internId,
-          internName: member.intern.fullName,
+          internId: memberId,
+          internName: memberName,
           task,
         });
       });
@@ -82,11 +90,15 @@ export default function TaskGroupQuotaAllocationModal({
       // Custom Quotas mode
       let taskPointer = 0;
       for (const member of members) {
-        const quota = customQuotas[member.internId] ?? 0;
+        const memberId =
+          member.internId || member.userId || member.user?.id || "";
+        const memberName =
+          member.intern?.fullName || member.user?.fullName || "—";
+        const quota = customQuotas[memberId] ?? 0;
         for (let i = 0; i < quota && taskPointer < unassignedTasks.length; i++) {
           assignments.push({
-            internId: member.internId,
-            internName: member.intern.fullName,
+            internId: memberId,
+            internName: memberName,
             task: unassignedTasks[taskPointer],
           });
           taskPointer++;
@@ -114,8 +126,11 @@ export default function TaskGroupQuotaAllocationModal({
     try {
       // Assign each task to the targeted intern
       const promises = calculatedAssignments.map((assignment) =>
-        taskAssignmentService.assignTask(assignment.task.id, {
-          internId: assignment.internId,
+        assignTaskMutation.mutateAsync({
+          taskId: assignment.task.id,
+          payload: {
+            internId: assignment.internId,
+          },
         }),
       );
 
@@ -247,23 +262,34 @@ export default function TaskGroupQuotaAllocationModal({
 
             <div className="max-h-48 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
               {members.map((member) => {
+                const memberId =
+                  member.internId || member.userId || member.user?.id || "";
+                if (!memberId) return null;
+                const memberName =
+                  member.intern?.fullName || member.user?.fullName || "—";
+                const memberSub =
+                  member.intern?.position?.name ||
+                  member.user?.internshipProfile?.position?.name ||
+                  member.intern?.department?.name ||
+                  member.user?.internshipProfile?.department?.name ||
+                  member.intern?.user?.email ||
+                  member.user?.email ||
+                  "—";
                 const assignedCount = calculatedAssignments.filter(
-                  (a) => a.internId === member.internId,
+                  (a) => a.internId === memberId,
                 ).length;
 
                 return (
                   <div
-                    key={member.internId}
+                    key={memberId}
                     className="flex items-center justify-between gap-3 p-2.5 rounded-xl border border-border bg-card/50"
                   >
                     <div className="min-w-0">
                       <p className="text-sm font-medium text-foreground truncate">
-                        {member.intern.fullName}
+                        {memberName}
                       </p>
                       <p className="text-xs text-muted truncate">
-                        {member.intern.position?.name ||
-                          member.intern.department?.name ||
-                          member.intern.user.email}
+                        {memberSub}
                       </p>
                     </div>
 
@@ -277,10 +303,10 @@ export default function TaskGroupQuotaAllocationModal({
                             type="number"
                             min={0}
                             max={unassignedTasks.length}
-                            value={customQuotas[member.internId] ?? 0}
+                            value={customQuotas[memberId] ?? 0}
                             onChange={(e) =>
                               handleCustomQuotaChange(
-                                member.internId,
+                                memberId,
                                 parseInt(e.target.value, 10) || 0,
                               )
                             }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ShieldCheck, FileText, CheckCircle2, AlertTriangle, Loader2 } from "lucide-react";
+import { ShieldCheck, FileText, CheckCircle2, AlertTriangle } from "lucide-react";
 import { useTranslations } from "next-intl";
 import DOMPurify from "isomorphic-dompurify";
 import Button from "@/components/ui/Button";
@@ -163,11 +163,7 @@ export default function InternRegulationModal() {
                 isLoading={acknowledgeMutation.isPending}
                 className="flex items-center gap-1.5"
               >
-                {acknowledgeMutation.isPending ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <CheckCircle2 className="h-4 w-4" />
-                )}
+                {!acknowledgeMutation.isPending && <CheckCircle2 className="h-4 w-4" />}
                 <span>{t("acknowledgeRegulationBtn")}</span>
               </Button>
             </div>

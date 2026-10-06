@@ -1024,7 +1024,7 @@ export default function TaskCreateModal({ onCloseModal }: Props) {
                 isLoading={isPending}
                 disabled={isPending || (assignMode === "other" && !selectedInternId)}
               >
-                {isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Plus className="h-4 w-4 mr-2" />}
+                {!isPending && <Plus className="h-4 w-4 mr-2" />}
                 Tạo công việc
               </Button>
             )}

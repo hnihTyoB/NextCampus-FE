@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useForm } from "react-hook-form";
-import { Layers, Loader2, AlertCircle } from "lucide-react";
+import { Layers, AlertCircle } from "lucide-react";
 import { useTranslations } from "next-intl";
 import Button from "@/components/ui/Button";
 import Select from "@/components/ui/Select";
@@ -200,11 +200,7 @@ export default function TaskGroupCreateModal({ onCloseModal }: Props) {
             {t("cancel")}
           </Button>
           <Button type="submit" variant="primary" isLoading={isPending} disabled={isPending}>
-            {isPending ? (
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            ) : (
-              <Layers className="h-4 w-4 mr-2" />
-            )}
+            {!isPending && <Layers className="h-4 w-4 mr-2" />}
             {t("createGroup")}
           </Button>
         </div>

@@ -625,7 +625,7 @@ export default function TaskEditModal({ taskId, onClose, onCloseModal }: Props) 
         <div className="flex items-center justify-end gap-3 pt-2">
           <Button type="button" variant="glass" size="md" disabled={isPending} onClick={onCloseModal}>{tm("cancel")}</Button>
           <Button type="submit" variant="primary" size="md" isLoading={isPending} disabled={isPending || (assignMode === "other" && !selectedInternId)}>
-            {isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Pencil className="h-4 w-4 mr-2" />}{tm("saveChanges")}
+            {!isPending && <Pencil className="h-4 w-4 mr-2" />}{tm("saveChanges")}
           </Button>
         </div>
       </form>
