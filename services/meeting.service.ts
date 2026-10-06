@@ -14,6 +14,8 @@ import type {
   RsvpPayload,
   SubmitAbsencePayload,
   ReviewAbsencePayload,
+  DiscordVoiceRoom,
+  DiscordPermissionResponse,
 } from "@/types/meeting";
 
 export const meetingService = {
@@ -125,6 +127,27 @@ export const meetingService = {
     const response = await api.get<{ success: boolean; data: string[] }>(
       "/meetings/busy-users",
       { params: { startTime, endTime, userIds } },
+    );
+    return response.data;
+  },
+
+  getDiscordVoiceRooms: async (): Promise<{ success: boolean; data: DiscordVoiceRoom[] }> => {
+    const response = await api.get<{ success: boolean; data: DiscordVoiceRoom[] }>(
+      "/meetings/discord-rooms",
+    );
+    return response.data;
+  },
+
+  grantDiscordPermissions: async (id: string): Promise<DiscordPermissionResponse> => {
+    const response = await api.post<DiscordPermissionResponse>(
+      `/meetings/${id}/discord-permissions/grant`,
+    );
+    return response.data;
+  },
+
+  resetDiscordPermissions: async (id: string): Promise<DiscordPermissionResponse> => {
+    const response = await api.post<DiscordPermissionResponse>(
+      `/meetings/${id}/discord-permissions/reset`,
     );
     return response.data;
   },

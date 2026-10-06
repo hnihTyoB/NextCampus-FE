@@ -8,7 +8,8 @@ export type SystemSettingKey =
   | "DISCORD_BOT_ENABLED"
   | "DISCORD_BOT_TOKEN"
   | "DISCORD_GUILD_ID"
-  | "DISCORD_INVITE_URL";
+  | "DISCORD_INVITE_URL"
+  | "DISCORD_MEETING_EMPTY_BUFFER_MINUTES";
 
 export interface SystemSetting {
   id: string;
@@ -42,6 +43,7 @@ export interface SystemSettings {
   DISCORD_BOT_TOKEN?: string;
   DISCORD_GUILD_ID?: string;
   DISCORD_INVITE_URL?: string;
+  DISCORD_MEETING_EMPTY_BUFFER_MINUTES?: number;
   [key: string]: string | number | boolean | undefined;
 }
 

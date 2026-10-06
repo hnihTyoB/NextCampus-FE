@@ -14,6 +14,8 @@ import {
   Trash2,
   Check,
   X,
+  Headphones,
+  ShieldCheck,
 } from "lucide-react";
 import { useTranslations, useLocale } from "next-intl";
 import Spinner from "@/components/ui/Spinner";
@@ -26,6 +28,8 @@ import { useReviewAbsence } from "@/hooks/meeting/useReviewAbsence";
 import { useAuth } from "@/hooks/auth/useAuth";
 import { useRsvpMeeting } from "@/hooks/meeting/useRsvpMeeting";
 import { useSubmitAbsence } from "@/hooks/meeting/useSubmitAbsence";
+import { useGrantDiscordPermissions } from "@/hooks/meeting/useGrantDiscordPermissions";
+import { useResetDiscordPermissions } from "@/hooks/meeting/useResetDiscordPermissions";
 import { useRBAC } from "@/hooks/rbac/useRBAC";
 
 interface Props {
@@ -68,6 +72,8 @@ export default function MeetingDetailModal({ meetingId, onCloseModal }: Props) {
   const reviewAbsence = useReviewAbsence();
   const rsvpMeeting = useRsvpMeeting();
   const submitAbsence = useSubmitAbsence();
+  const grantDiscord = useGrantDiscordPermissions();
+  const resetDiscord = useResetDiscordPermissions();
 
   const [confirmAction, setConfirmAction] = useState<"cancel" | "delete" | null>(null);
   const [showLeaveForm, setShowLeaveForm] = useState(false);
@@ -216,6 +222,36 @@ export default function MeetingDetailModal({ meetingId, onCloseModal }: Props) {
             >
               {meeting.meetingLink}
             </a>
+          </div>
+        )}
+        {meeting.discordVoiceLink && (
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-sm text-foreground/90 pt-0.5">
+            <div className="flex items-center gap-3 min-w-0">
+              <Headphones className="h-4 w-4 shrink-0 text-indigo-400" />
+              <a
+                href={meeting.discordVoiceLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="truncate text-indigo-400 hover:text-indigo-300 hover:underline font-medium"
+              >
+                {t("admin.meetings.joinDiscordVoice")}
+              </a>
+            </div>
+            <span
+              className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-semibold self-start sm:self-auto ${
+                meeting.discordPermissionsResetAt
+                  ? "bg-slate-500/15 text-slate-300 border border-slate-500/30"
+                  : meeting.discordPermissionsGranted
+                    ? "bg-emerald-500/15 text-emerald-300 border border-emerald-500/30"
+                    : "bg-amber-500/15 text-amber-300 border border-amber-500/30"
+              }`}
+            >
+              {meeting.discordPermissionsResetAt
+                ? t("admin.meetings.discordRoomStatusReset")
+                : meeting.discordPermissionsGranted
+                  ? t("admin.meetings.discordRoomStatusGranted")
+                  : t("admin.meetings.discordRoomStatusPending")}
+            </span>
           </div>
         )}
         <div className="flex items-center gap-3 text-sm text-foreground/90">
@@ -476,9 +512,47 @@ export default function MeetingDetailModal({ meetingId, onCloseModal }: Props) {
               </div>
             </div>
           ) : (
-            <div className="flex items-center justify-end gap-2.5">
-              {canDeleteMeeting && (
-                <Button
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+              {/* Discord room permission controls */}
+              {meeting.discordChannelId && canUpdateMeeting ? (
+                <div className="flex items-center gap-2">
+                  {!meeting.discordPermissionsGranted ? (
+                    <Button
+                      variant="glass"
+                      size="sm"
+                      onClick={() => grantDiscord.mutate(meeting.id)}
+                      disabled={grantDiscord.isPending}
+                      className="gap-1.5 text-indigo-300 hover:text-indigo-200"
+                    >
+                      {grantDiscord.isPending ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin shrink-0" />
+                      ) : (
+                        <ShieldCheck className="h-3.5 w-3.5 shrink-0" />
+                      )}
+                      <span>{t("admin.meetings.grantDiscordPermissions")}</span>
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="glass"
+                      size="sm"
+                      onClick={() => resetDiscord.mutate(meeting.id)}
+                      disabled={resetDiscord.isPending}
+                      className="gap-1.5 text-amber-300 hover:text-amber-200"
+                    >
+                      {resetDiscord.isPending ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin shrink-0" />
+                      ) : (
+                        <Headphones className="h-3.5 w-3.5 shrink-0" />
+                      )}
+                      <span>{t("admin.meetings.resetDiscordPermissions")}</span>
+                    </Button>
+                  )}
+                </div>
+              ) : <div />}
+
+              <div className="flex items-center justify-end gap-2.5">
+                {canDeleteMeeting && (
+                  <Button
                   variant="danger"
                   size="sm"
                   onClick={() => setConfirmAction("delete")}
@@ -509,6 +583,7 @@ export default function MeetingDetailModal({ meetingId, onCloseModal }: Props) {
                   <span>{t("admin.meetings.cancelMeeting")}</span>
                 </Button>
               )}
+              </div>
             </div>
           )}
         </div>

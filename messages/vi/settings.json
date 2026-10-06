@@ -79,6 +79,9 @@
       "discordInviteUrlTitle": "Đường Dẫn Mời Vào Máy Chủ Discord",
       "discordInviteUrlDesc": "Đường liên kết mời vĩnh viễn vào Server Discord NexCampus. Liên kết này tự động đính kèm vào email duyệt tài khoản và email nhắc nhở liên kết.",
       "discordInviteUrlPlaceholder": "Ví dụ: https://discord.gg/nexcampus",
+      "discordMeetingEmptyBufferTitle": "Thời Gian Chờ Dọn Phòng Discord Khi Trống",
+      "discordMeetingEmptyBufferDesc": "Số phút (0 – 120 phút) phòng thoại Voice phải hoàn toàn trống (0 người) tính từ giờ kết thúc cuộc họp trước khi Bot thu hồi quyền truy cập của người tham gia.",
+      "discordMeetingEmptyBufferPlaceholder": "5",
       "discordBotTokenTitle": "Mã Token Discord Bot",
       "discordBotTokenDesc": "Token bí mật cấp quyền cho Bot từ Discord Developer Portal (được mã hóa và bảo vệ an toàn)",
       "discordBotTokenPlaceholder": "Nhập mã Bot Token (ví dụ: MTU1NDQ0NzM...)",
@@ -113,7 +116,8 @@
         "applicationSizeRange": "Dung lượng hồ sơ tuyển dụng phải từ 1 đến 50 MB",
         "discordGuildIdFormat": "Server ID phải là chuỗi số gồm 16 đến 21 chữ số",
         "discordInviteUrlFormat": "Đường link mời Discord phải bắt đầu bằng https://discord.gg/ hoặc https://discord.com/invite/",
-        "discordTokenRequired": "Token Discord Bot không được để trống khi bật tự động hóa"
+        "discordTokenRequired": "Token Discord Bot không được để trống khi bật tự động hóa",
+        "discordBufferMinutesFormat": "Thời gian chờ dọn phòng phải là số nguyên từ 0 đến 120 phút"
       },
       "resetModal": {
         "title": "Xác Nhận Khôi Phục Cài Đặt Gốc",

@@ -79,6 +79,9 @@
       "discordInviteUrlTitle": "Discord Server Invite URL",
       "discordInviteUrlDesc": "Permanent invite link to the official NexCampus Discord Server. Automatically included in welcome and reminder emails.",
       "discordInviteUrlPlaceholder": "e.g. https://discord.gg/nexcampus",
+      "discordMeetingEmptyBufferTitle": "Discord Room Empty Buffer Time",
+      "discordMeetingEmptyBufferDesc": "The number of minutes (0 - 120 mins) the Discord voice channel must remain completely empty (0 members) following the meeting end time before the Bot revokes participant access permissions.",
+      "discordMeetingEmptyBufferPlaceholder": "5",
       "discordBotTokenTitle": "Discord Bot Token",
       "discordBotTokenDesc": "Secret token granting bot permissions from the Discord Developer Portal (encrypted and secured)",
       "discordBotTokenPlaceholder": "Enter Bot Token (e.g. MTU1NDQ0NzM...)",
@@ -113,7 +116,8 @@
         "applicationSizeRange": "Application file size must be between 1 and 50 MB",
         "discordGuildIdFormat": "Server ID must be a numeric string between 16 and 21 digits",
         "discordInviteUrlFormat": "Discord invite URL must start with https://discord.gg/ or https://discord.com/invite/",
-        "discordTokenRequired": "Discord Bot Token cannot be empty when bot automation is enabled"
+        "discordTokenRequired": "Discord Bot Token cannot be empty when bot automation is enabled",
+        "discordBufferMinutesFormat": "Buffer minutes must be an integer between 0 and 120 minutes"
       },
       "resetModal": {
         "title": "Confirm Reset to Factory Defaults",

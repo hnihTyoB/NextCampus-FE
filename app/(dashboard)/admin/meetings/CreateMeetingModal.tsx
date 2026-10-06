@@ -16,6 +16,7 @@ import {
   FileEdit,
   User,
   Search,
+  Headphones,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "react-hot-toast";
@@ -28,6 +29,7 @@ import { DatePicker } from "@/components/ui/DatePicker";
 import { TimePicker } from "@/components/ui/TimePicker";
 import { useAuth } from "@/hooks/auth/useAuth";
 import { useCreateMeeting } from "@/hooks/meeting/useCreateMeeting";
+import { useDiscordVoiceRooms } from "@/hooks/meeting/useDiscordVoiceRooms";
 import { getUsersService } from "@/services/user.service";
 import { meetingService } from "@/services/meeting.service";
 import { departmentService } from "@/services/department.service";
@@ -65,6 +67,7 @@ function useCreateMeetingSchema(t: ReturnType<typeof useTranslations>) {
           meetingType: z.enum(["ONLINE", "OFFLINE", "HYBRID"]),
           location: z.string().optional(),
           meetingLink: z.string().optional(),
+          discordChannelId: z.string().optional(),
           meetingDate: z.string().min(1, t("admin.meetings.dateRequired")),
           startTimeStr: z.string().min(1, t("admin.meetings.startTimeRequired")),
           endTimeStr: z.string().min(1, t("admin.meetings.endTimeRequired")),
@@ -112,6 +115,7 @@ interface FormValues {
   meetingType: MeetingType;
   location?: string;
   meetingLink?: string;
+  discordChannelId?: string;
   meetingDate: string;
   startTimeStr: string;
   endTimeStr: string;
@@ -148,6 +152,9 @@ export default function CreateMeetingModal({ onCloseModal, defaultDate }: Props)
   const leaders = useMemo(() => leadersData?.data ?? [], [leadersData]);
   const departments = useMemo(() => departmentsData?.data ?? [], [departmentsData]);
 
+  const { data: voiceRoomsRes } = useDiscordVoiceRooms(true);
+  const voiceRooms = useMemo(() => voiceRoomsRes?.data ?? [], [voiceRoomsRes]);
+
   const schema = useCreateMeetingSchema(t);
 
   const {
@@ -170,6 +177,7 @@ export default function CreateMeetingModal({ onCloseModal, defaultDate }: Props)
       description: "",
       location: "",
       meetingLink: "",
+      discordChannelId: "",
       departmentId: "",
     },
   });
@@ -261,6 +269,7 @@ export default function CreateMeetingModal({ onCloseModal, defaultDate }: Props)
       meetingType: data.meetingType,
       location: data.location?.trim() || undefined,
       meetingLink: data.meetingLink?.trim() || undefined,
+      discordChannelId: data.discordChannelId?.trim() || undefined,
       startTime: startIso,
       endTime: endIso,
       visibility: data.visibility,
@@ -442,6 +451,45 @@ export default function CreateMeetingModal({ onCloseModal, defaultDate }: Props)
               error={errors.meetingLink?.message}
               {...register("meetingLink")}
             />
+          </div>
+        )}
+
+        {/* Discord Voice Room (ONLINE or HYBRID) */}
+        {(watchMeetingType === "ONLINE" || watchMeetingType === "HYBRID") && (
+          <div className="col-span-full space-y-2">
+            <Controller
+              name="discordChannelId"
+              control={control}
+              render={({ field }) => (
+                <Select
+                  label={t("admin.meetings.formDiscordVoiceRoom")}
+                  placeholder={t("admin.meetings.selectDiscordVoiceRoom")}
+                  value={field.value || ""}
+                  onChange={(val) => field.onChange(val)}
+                  options={[
+                    { value: "", label: t("admin.meetings.noDiscordRoom") },
+                    ...voiceRooms.map((room) => {
+                      const privacyTag = room.isPrivate
+                        ? `🔒 [${t("admin.meetings.privateRoomTag")}]`
+                        : `🌐 [${t("admin.meetings.publicRoomTag")}]`;
+                      return {
+                        value: room.id,
+                        label: `${room.name} ${privacyTag} (${room.currentMembersCount} ${t("admin.meetings.onlineMembers")})`,
+                      };
+                    }),
+                  ]}
+                  error={errors.discordChannelId?.message}
+                />
+              )}
+            />
+            {watch("discordChannelId") && (
+              <div className="flex items-start gap-2.5 rounded-xl border border-indigo-500/30 bg-indigo-500/10 p-3 text-xs text-indigo-300 dark:text-indigo-200">
+                <Headphones className="h-4 w-4 shrink-0 text-indigo-400 mt-0.5" />
+                <p className="leading-relaxed">
+                  {t("admin.meetings.discordVoiceRoomNotice")}
+                </p>
+              </div>
+            )}
           </div>
         )}
 

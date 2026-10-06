@@ -52,6 +52,10 @@ export interface Meeting {
   location: string | null;
   meetingType: MeetingType;
   meetingLink: string | null;
+  discordChannelId?: string | null;
+  discordVoiceLink?: string | null;
+  discordPermissionsGranted?: boolean;
+  discordPermissionsResetAt?: string | null;
   startTime: string;
   endTime: string;
   status: MeetingStatus;
@@ -153,6 +157,33 @@ export interface ParticipantInput {
   participantRole?: ParticipantRole;
 }
 
+export interface DiscordVoiceRoom {
+  id: string;
+  name: string;
+  type: number;
+  parentId?: string;
+  position: number;
+  userLimit?: number;
+  bitrate?: number;
+  currentMembersCount: number;
+  voiceUrl: string;
+  isPrivate?: boolean;
+}
+
+export interface DiscordPermissionResult {
+  success: boolean;
+  grantedCount?: number;
+  resetCount?: number;
+  totalUsers?: number;
+  errors?: string[];
+}
+
+export interface DiscordPermissionResponse {
+  success: boolean;
+  data: DiscordPermissionResult;
+  message?: string;
+}
+
 export interface CreateMeetingPayload {
   title: string;
   description?: string;
@@ -161,6 +192,8 @@ export interface CreateMeetingPayload {
   location?: string;
   meetingType: MeetingType;
   meetingLink?: string;
+  discordChannelId?: string;
+  discordVoiceLink?: string;
   startTime: string;
   endTime: string;
   status?: "DRAFT" | "SCHEDULED";
@@ -177,6 +210,8 @@ export interface UpdateMeetingPayload {
   location?: string | null;
   meetingType?: MeetingType;
   meetingLink?: string | null;
+  discordChannelId?: string | null;
+  discordVoiceLink?: string | null;
   startTime?: string;
   endTime?: string;
   status?: MeetingStatus;
