@@ -32,7 +32,12 @@ import TaskEditModal from "./TaskEditModal";
 import TaskGroupMemberSelector from "./TaskGroupMemberSelector";
 import { useForm } from "react-hook-form";
 import { useQueryClient } from "@tanstack/react-query";
-import { extractTaskGroups, type TaskGroup, type UpdateTaskGroupPayload } from "@/types/task-group";
+import {
+  extractTaskGroups,
+  getTaskGroupMemberId,
+  type TaskGroup,
+  type UpdateTaskGroupPayload,
+} from "@/types/task-group";
 import { extractTasks, type Task, type TaskQueryParams } from "@/types/task";
 
 type GroupAction = { type: "view" | "edit" | "delete"; groupId: string; groupName: string } | null;
@@ -1326,7 +1331,9 @@ function EditGroupForm({ group, onClose }: { group: TaskGroup; onClose: () => vo
   const updateMutation = useUpdateTaskGroup();
   const [departmentId, setDepartmentId] = useState(group.departmentId ?? "");
   const [memberIds, setMemberIds] = useState(
-    group.members?.map((member) => member.internId) ?? [],
+    (group.members
+      ?.map(getTaskGroupMemberId)
+      .filter(Boolean) as string[]) ?? [],
   );
   const {
     register,
@@ -1347,7 +1354,7 @@ function EditGroupForm({ group, onClose }: { group: TaskGroup; onClose: () => vo
 
   return (
     <form
-      onSubmit={handleSubmit((payload) =>
+      onSubmit={handleSubmit((payload: UpdateTaskGroupPayload) =>
         updateMutation.mutate(
           {
             id: group.id,
@@ -1420,7 +1427,10 @@ function EditGroupForm({ group, onClose }: { group: TaskGroup; onClose: () => vo
               min={1}
               placeholder={te("unlimitedPlaceholder")}
               {...register("maxActiveTasks", {
-                setValueAs: (value) => (value === "" || value === null || value === undefined ? null : Number(value)),
+                setValueAs: (value: unknown) =>
+                  value === "" || value === null || value === undefined
+                    ? null
+                    : Number(value),
               })}
               className="w-full h-[42px] sm:h-[46px] rounded-xl border border-border bg-card px-4 text-xs sm:text-sm text-foreground placeholder:text-muted focus:border-primary-light/40 focus:outline-none"
             />
@@ -1445,7 +1455,10 @@ function EditGroupForm({ group, onClose }: { group: TaskGroup; onClose: () => vo
       </div>
       <div className="flex justify-end gap-3 pt-1">
         <Button type="button" variant="glass" size="md" onClick={onClose}>{te("cancel")}</Button>
-        <Button type="submit" variant="primary" size="md" isLoading={updateMutation.isPending}>{updateMutation.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Pencil className="h-4 w-4 mr-2" />}{te("saveChanges")}</Button>
+        <Button type="submit" variant="primary" size="md" isLoading={updateMutation.isPending}>
+          {!updateMutation.isPending && <Pencil className="h-4 w-4 mr-2" />}
+          {te("saveChanges")}
+        </Button>
       </div>
     </form>
   );

@@ -3,16 +3,46 @@
 export type TaskGroupStatus = "ACTIVE" | "COMPLETED" | "ARCHIVED";
 
 export interface TaskGroupMember {
-  internId: string;
-  intern: {
+  userId?: string;
+  internId?: string;
+  user?: {
+    id: string;
+    fullName: string;
+    email: string;
+    avatarUrl?: string | null;
+    internshipProfile?: {
+      id: string;
+      mentorId: string | null;
+      status: string;
+      department: { id: string; name: string } | null;
+      position: { id: string; name: string } | null;
+    } | null;
+  };
+  intern?: {
     id: string;
     leaderId: string | null;
     fullName: string;
-    status: "ACTIVE" | "COMPLETED" | "DROPPED";
-    user: { email: string | null; avatarUrl?: string | null };
-    department: { id: string; name: string } | null;
-    position: { id: string; name: string } | null;
+    status: "ACTIVE" | "COMPLETED" | "DROPPED" | string;
+    user?: { email: string | null; avatarUrl?: string | null };
+    department?: { id: string; name: string } | null;
+    position?: { id: string; name: string } | null;
   };
+}
+
+export function getTaskGroupMemberId(member: TaskGroupMember): string {
+  return member.userId || member.internId || member.user?.id || member.intern?.id || "";
+}
+
+export function getTaskGroupMemberName(member: TaskGroupMember): string {
+  return member.intern?.fullName || member.user?.fullName || "—";
+}
+
+export function getTaskGroupMemberEmail(member: TaskGroupMember): string {
+  return member.user?.email || member.intern?.user?.email || "";
+}
+
+export function getTaskGroupMemberAvatar(member: TaskGroupMember): string | undefined {
+  return member.user?.avatarUrl || member.intern?.user?.avatarUrl || undefined;
 }
 
 export interface TaskGroup {

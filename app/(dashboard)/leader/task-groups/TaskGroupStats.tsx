@@ -4,7 +4,7 @@ import { useTranslations } from "next-intl";
 import { useMemo } from "react";
 import { Layers, CheckCircle2, Users, AlertTriangle } from "lucide-react";
 import { useTaskGroups } from "@/hooks/task-group/useTaskGroups";
-import { extractTaskGroups } from "@/types/task-group";
+import { extractTaskGroups, getTaskGroupMemberId } from "@/types/task-group";
 import MetalCard from "@/components/ui/MetalCard";
 import Spinner from "@/components/ui/Spinner";
 
@@ -19,7 +19,10 @@ export default function TaskGroupStats() {
 
   const memberSet = new Set<string>();
   taskGroups.forEach((group) => {
-    group.members?.forEach((m) => memberSet.add(m.internId));
+    group.members?.forEach((m) => {
+      const id = getTaskGroupMemberId(m);
+      if (id) memberSet.add(id);
+    });
   });
   const totalMembers = memberSet.size;
 

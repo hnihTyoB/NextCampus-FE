@@ -35,7 +35,9 @@ export default function TaskGroupEditModal({
     taskGroup.status || "ACTIVE",
   );
   const [selectedMemberIds, setSelectedMemberIds] = useState<string[]>(
-    taskGroup.members?.map((m) => m.internId) || [],
+    taskGroup.members
+      ?.map((m) => m.userId || m.internId || m.user?.id || m.intern?.id)
+      .filter(Boolean) as string[] || [],
   );
   const [searchIntern, setSearchIntern] = useState("");
   const [maxWorkloadDays, setMaxWorkloadDays] = useState(
@@ -74,10 +76,15 @@ export default function TaskGroupEditModal({
     });
   }, [allInterns, searchIntern, departmentId]);
 
-  const toggleMember = (id: string) => {
-    setSelectedMemberIds((prev) =>
-      prev.includes(id) ? prev.filter((mId) => mId !== id) : [...prev, id],
-    );
+  const toggleMember = (id: string, alternateId?: string) => {
+    setSelectedMemberIds((prev) => {
+      const isSelected =
+        prev.includes(id) || (alternateId ? prev.includes(alternateId) : false);
+      if (isSelected) {
+        return prev.filter((mId) => mId !== id && mId !== alternateId);
+      }
+      return [...prev, id];
+    });
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -96,7 +103,16 @@ export default function TaskGroupEditModal({
           description: description.trim() || null,
           departmentId: departmentId || null,
           status,
-          memberIds: selectedMemberIds,
+          memberIds: Array.from(
+            new Set(
+              selectedMemberIds.map((id) => {
+                const intern = allInterns.find(
+                  (i) => i.id === id || i.userId === id,
+                );
+                return intern?.userId || id;
+              }),
+            ),
+          ),
           maxWorkloadDays,
         },
       },
@@ -218,7 +234,9 @@ export default function TaskGroupEditModal({
           {selectedMemberIds.length > 0 && (
             <div className="flex flex-wrap gap-1.5 mb-1 max-h-24 overflow-y-auto p-2 bg-card/80 border border-border rounded-xl">
               {selectedMemberIds.map((id) => {
-                const intern = allInterns.find((i) => i.id === id);
+                const intern = allInterns.find(
+                  (i) => i.id === id || i.userId === id,
+                );
                 return (
                   <span
                     key={id}
@@ -227,7 +245,7 @@ export default function TaskGroupEditModal({
                     <span>{intern?.fullName || id}</span>
                     <button
                       type="button"
-                      onClick={() => toggleMember(id)}
+                      onClick={() => toggleMember(id, intern?.userId)}
                       className="hover:text-rose-400 transition"
                       aria-label="Remove member"
                     >
@@ -259,11 +277,13 @@ export default function TaskGroupEditModal({
               </p>
             ) : (
               filteredInterns.map((intern) => {
-                const isSelected = selectedMemberIds.includes(intern.id);
+                const isSelected =
+                  selectedMemberIds.includes(intern.id) ||
+                  (intern.userId ? selectedMemberIds.includes(intern.userId) : false);
                 return (
                   <div
                     key={intern.id}
-                    onClick={() => toggleMember(intern.id)}
+                    onClick={() => toggleMember(intern.userId || intern.id, intern.id)}
                     className={`flex items-center justify-between p-2 rounded-lg cursor-pointer transition text-xs select-none ${
                       isSelected
                         ? "bg-cyan-500/20 text-cyan-300 border border-cyan-400/30 font-medium"

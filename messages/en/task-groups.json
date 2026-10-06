@@ -74,7 +74,12 @@
       "noFilterResults": "No task groups match your filter criteria.",
       "resetFilter": "Reset filters",
       "reload": "Refresh data",
-      "activeFiltersCount": "({count} active filters)"
+      "activeFiltersCount": "({count} active filters)",
+      "memberSelectorTitle": "Task Group Members",
+      "selectedCount": "Selected {count}",
+      "loadingInterns": "Loading interns list...",
+      "noInternsFound": "No active interns matching the selected leader/department.",
+      "aiConstraintNote": "AI is only allowed to assign tasks to the interns selected here."
     }
   },
   "taskGroups": {

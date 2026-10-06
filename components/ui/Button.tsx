@@ -21,6 +21,23 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   fullWidth?: boolean;
 }
 
+function sanitizeLoadingChildren(children: React.ReactNode): React.ReactNode {
+  return React.Children.map(children, (child) => {
+    if (React.isValidElement<{ className?: string; children?: React.ReactNode }>(child)) {
+      const className = child.props.className;
+      if (typeof className === "string" && className.includes("animate-spin")) {
+        return null;
+      }
+      if (child.props.children) {
+        return React.cloneElement(child, {
+          children: sanitizeLoadingChildren(child.props.children),
+        });
+      }
+    }
+    return child;
+  });
+}
+
 const Button = forwardRef<HTMLButtonElement, ButtonProps>(({
   children,
   className = '',
@@ -88,7 +105,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(({
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
           </svg>
-          {loadingText ? <span>{loadingText}</span> : children ? <span>{children}</span> : null}
+          {loadingText ? <span>{loadingText}</span> : children ? <span>{sanitizeLoadingChildren(children)}</span> : null}
         </div>
       ) : (
         <span className={`flex items-center justify-center ${innerGapStyles[size]} w-full h-full`}>

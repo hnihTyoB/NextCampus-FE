@@ -64,9 +64,21 @@ export default function TaskGroupAiAllocationModal({
     hasPermission(state.user?.permissions, "USER_ROLE_ASSIGN");
 
   const interns = (groupData?.data.members ?? [])
-    .map((member) => member.intern)
+    .map((member) => {
+      if (member.intern) return member.intern;
+      return {
+        id: member.userId || member.user?.id || member.internId || "",
+        fullName: member.user?.fullName || "",
+        leaderId: member.user?.internshipProfile?.mentorId || null,
+        status: member.user?.internshipProfile?.status ?? "ACTIVE",
+        user: { email: member.user?.email || null, avatarUrl: member.user?.avatarUrl || null },
+        department: member.user?.internshipProfile?.department || null,
+        position: member.user?.internshipProfile?.position || null,
+      };
+    })
     .filter(
       (intern) =>
+        intern &&
         intern.status === "ACTIVE" &&
         (hasGlobalAccess || intern.leaderId === state.user?.id),
     );

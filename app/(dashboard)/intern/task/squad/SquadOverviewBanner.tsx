@@ -5,6 +5,11 @@ import { Users, Layers, Building } from "lucide-react";
 import { useTranslations } from "next-intl";
 import MetalCard from "@/components/ui/MetalCard";
 import type { TaskGroup, TaskGroupTask } from "@/types/task-group";
+import {
+  getTaskGroupMemberId,
+  getTaskGroupMemberName,
+  getTaskGroupMemberAvatar,
+} from "@/types/task-group";
 
 interface SquadOverviewBannerProps {
   group: TaskGroup;
@@ -60,9 +65,14 @@ export default function SquadOverviewBanner({ group, tasks }: SquadOverviewBanne
                 {t("squadMembers")} ({group.members.length})
               </span>
               <div className="flex items-center -space-x-2.5 py-2 overflow-visible">
-                {group.members.map((member) => {
-                  const avatar = member.intern.user.avatarUrl;
-                  const name = member.intern.fullName;
+                {group.members.map((member, idx) => {
+                  const avatar = getTaskGroupMemberAvatar(member);
+                  const name = getTaskGroupMemberName(member);
+                  const positionName =
+                    member.intern?.position?.name ||
+                    member.user?.internshipProfile?.position?.name ||
+                    "Intern";
+                  const memberId = getTaskGroupMemberId(member) || `member-${idx}`;
                   const initials = name
                     .split(" ")
                     .map((n) => n[0])
@@ -72,8 +82,8 @@ export default function SquadOverviewBanner({ group, tasks }: SquadOverviewBanne
 
                   return (
                     <div
-                      key={member.internId}
-                      title={`${name} (${member.intern.position?.name || "Intern"})`}
+                      key={memberId}
+                      title={`${name} (${positionName})`}
                       className="relative group shrink-0 transition-transform duration-200 hover:scale-110 hover:z-20 cursor-pointer"
                     >
                       {avatar ? (
