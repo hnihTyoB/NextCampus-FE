@@ -156,9 +156,6 @@ export default function InternStatsOverview() {
                 <h1 className="text-2xl font-bold metal-text">
                   {t("greeting", { name: internDisplayName })}
                 </h1>
-                <span className="hidden sm:inline-flex rounded-full border border-primary-light/30 bg-primary-light/10 px-3 py-0.5 text-xs font-semibold text-primary-light">
-                  {t("badge")}
-                </span>
               </div>
               <p className="mt-1 text-sm text-muted">
                 {t("welcome")}

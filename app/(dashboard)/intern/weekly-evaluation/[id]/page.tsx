@@ -29,62 +29,12 @@ import {
   CRITERIA_SECTIONS,
   RATING_COLORS,
   RATING_SCORES,
+  getRatingLevel,
+  computeEvaluationScore,
   type EvaluationRatings,
   type RatingLevel,
   type WeeklyEvaluation,
 } from "@/types/weekly-evaluation";
-
-const RATING_ALIASES: Record<string, string> = {
-  pressureTolerance: "resilience",
-  resilience: "pressureTolerance",
-  practicalSkill: "practicalSkills",
-  practicalSkills: "practicalSkill",
-  languageProficiency: "foreignLanguage",
-  foreignLanguage: "languageProficiency",
-  contentRequirement: "contentQuality",
-  contentQuality: "contentRequirement",
-  progressRequirement: "progressDelivery",
-  progressDelivery: "progressRequirement",
-};
-
-function getRatingLevel(
-  ratings?: EvaluationRatings | Record<string, unknown> | null,
-  key?: string,
-): RatingLevel | undefined {
-  if (!ratings || !key) return undefined;
-  const raw = (ratings as Record<string, unknown>)[key];
-  if (
-    typeof raw === "string" &&
-    (raw === "TOT" || raw === "KHA" || raw === "TB" || raw === "TBY" || raw === "YEU")
-  ) {
-    return raw as RatingLevel;
-  }
-  const alias = RATING_ALIASES[key];
-  if (alias) {
-    const aliasVal = (ratings as Record<string, unknown>)[alias];
-    if (
-      typeof aliasVal === "string" &&
-      (aliasVal === "TOT" || aliasVal === "KHA" || aliasVal === "TB" || aliasVal === "TBY" || aliasVal === "YEU")
-    ) {
-      return aliasVal as RatingLevel;
-    }
-  }
-  return undefined;
-}
-
-function computeTotalFromRatings(ratings: EvaluationRatings): number {
-  const allKeys = CRITERIA_SECTIONS.flatMap((s) => s.criteria.map((c) => c.key));
-  const validScores = allKeys
-    .map((k) => {
-      const lvl = getRatingLevel(ratings, k);
-      return lvl && RATING_SCORES[lvl] !== undefined ? RATING_SCORES[lvl] : null;
-    })
-    .filter((score): score is number => typeof score === "number");
-  if (validScores.length === 0) return 0;
-  return parseFloat(
-    (validScores.reduce((a, b) => a + b, 0) / validScores.length).toFixed(1),
-  );
-}
 
 function getSubScores(evaluation: WeeklyEvaluation) {
   if (evaluation.ratings) {
@@ -429,14 +379,7 @@ function WeeklyEvaluationDetailContent() {
 
   const hasRatings = evaluation.ratings !== null && evaluation.ratings !== undefined;
   const ratings = evaluation.ratings as EvaluationRatings | null;
-  const finalScore =
-    hasRatings && ratings
-      ? computeTotalFromRatings(ratings)
-      : typeof evaluation.score === "number"
-      ? evaluation.score
-      : typeof evaluation.totalScore === "number"
-      ? evaluation.totalScore
-      : 0;
+  const finalScore = computeEvaluationScore(evaluation);
 
   const scores = getSubScores(evaluation);
   const subScores = [

@@ -155,13 +155,13 @@ export default function ReportDetail({
     );
     const content = (
       <div className="flex flex-col items-center justify-center min-h-[340px] text-center p-8">
-        <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-red-500/20 bg-red-500/10 mb-4">
-          <AlertCircle className="h-8 w-8 text-rose-400" />
+        <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-rose-300 bg-rose-100/80 text-rose-600 dark:border-rose-500/20 dark:bg-rose-500/10 dark:text-rose-400 mb-4">
+          <AlertCircle className="h-8 w-8 text-rose-600 dark:text-rose-400" />
         </div>
-        <h3 className="text-lg font-semibold text-rose-300 mb-2">
+        <h3 className="text-lg font-semibold text-rose-800 dark:text-rose-300 mb-2">
           {t("missingReport")}
         </h3>
-        <p className="text-sm text-slate-400 max-w-xs">{formatted}</p>
+        <p className="text-sm text-slate-600 dark:text-slate-400 max-w-xs">{formatted}</p>
         <p className="text-sm text-muted mt-1">
           {t("missingReportDesc")}
         </p>

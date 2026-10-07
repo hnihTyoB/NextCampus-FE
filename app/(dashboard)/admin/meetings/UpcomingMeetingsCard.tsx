@@ -34,9 +34,21 @@ export default function UpcomingMeetingsCard({
     59,
   ).toISOString();
 
+  const endOfDay = new Date(
+    today.getFullYear(),
+    today.getMonth(),
+    today.getDate(),
+    23,
+    59,
+    59,
+    999,
+  );
+
   const { data, isPending } = useMeetings({
     startTimeFrom: start,
     startTimeTo: end,
+    startDate: start,
+    endDate: end,
     sortBy: "startTime",
     order: "asc",
     limit: 10,
@@ -44,6 +56,7 @@ export default function UpcomingMeetingsCard({
   const now = new Date();
   const meetings = (data?.data ?? []).filter((m) => {
     if (new Date(m.endTime) <= now) return false;
+    if (new Date(m.startTime) > endOfDay) return false;
     if (m.status !== "SCHEDULED" && m.status !== "ONGOING") return false;
     if (scope === "all") return true;
     return isUserParticipating(m, state.user?.id);
