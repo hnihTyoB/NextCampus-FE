@@ -6,7 +6,7 @@ import { useTranslations } from "next-intl";
 import React from "react";
 import { createRoot } from "react-dom/client";
 import { jsPDF } from "jspdf";
-import html2canvas from "html2canvas";
+import html2canvas from "html2canvas-pro";
 import { pdfExportService } from "@/services/pdf-export.service";
 import { InternshipSummaryReportTemplate } from "@/components/pdf/InternshipSummaryReportTemplate";
 import type { InternshipSummaryData } from "@/types/pdf-export";

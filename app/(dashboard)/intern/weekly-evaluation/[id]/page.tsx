@@ -31,25 +31,114 @@ import {
   RATING_SCORES,
   type EvaluationRatings,
   type RatingLevel,
+  type WeeklyEvaluation,
 } from "@/types/weekly-evaluation";
+
+const RATING_ALIASES: Record<string, string> = {
+  pressureTolerance: "resilience",
+  resilience: "pressureTolerance",
+  practicalSkill: "practicalSkills",
+  practicalSkills: "practicalSkill",
+  languageProficiency: "foreignLanguage",
+  foreignLanguage: "languageProficiency",
+  contentRequirement: "contentQuality",
+  contentQuality: "contentRequirement",
+  progressRequirement: "progressDelivery",
+  progressDelivery: "progressRequirement",
+};
+
+function getRatingLevel(
+  ratings?: EvaluationRatings | Record<string, unknown> | null,
+  key?: string,
+): RatingLevel | undefined {
+  if (!ratings || !key) return undefined;
+  const raw = (ratings as Record<string, unknown>)[key];
+  if (
+    typeof raw === "string" &&
+    (raw === "TOT" || raw === "KHA" || raw === "TB" || raw === "TBY" || raw === "YEU")
+  ) {
+    return raw as RatingLevel;
+  }
+  const alias = RATING_ALIASES[key];
+  if (alias) {
+    const aliasVal = (ratings as Record<string, unknown>)[alias];
+    if (
+      typeof aliasVal === "string" &&
+      (aliasVal === "TOT" || aliasVal === "KHA" || aliasVal === "TB" || aliasVal === "TBY" || aliasVal === "YEU")
+    ) {
+      return aliasVal as RatingLevel;
+    }
+  }
+  return undefined;
+}
 
 function computeTotalFromRatings(ratings: EvaluationRatings): number {
   const allKeys = CRITERIA_SECTIONS.flatMap((s) => s.criteria.map((c) => c.key));
+  const validScores = allKeys
+    .map((k) => {
+      const lvl = getRatingLevel(ratings, k);
+      return lvl && RATING_SCORES[lvl] !== undefined ? RATING_SCORES[lvl] : null;
+    })
+    .filter((score): score is number => typeof score === "number");
+  if (validScores.length === 0) return 0;
   return parseFloat(
-    (
-      allKeys.map((k) => RATING_SCORES[ratings[k]]).reduce((a, b) => a + b, 0) /
-      allKeys.length
-    ).toFixed(2),
+    (validScores.reduce((a, b) => a + b, 0) / validScores.length).toFixed(1),
   );
 }
 
-function RatingBadge({ level }: { level: RatingLevel }) {
+function getSubScores(evaluation: WeeklyEvaluation) {
+  if (evaluation.ratings) {
+    const r = evaluation.ratings as EvaluationRatings;
+    const s = (k: string) => {
+      const val = getRatingLevel(r, k);
+      return val && RATING_SCORES[val] !== undefined ? RATING_SCORES[val] : 6;
+    };
+    const avg = (nums: number[]) =>
+      parseFloat((nums.reduce((a, b) => a + b, 0) / nums.length).toFixed(1));
+
+    return {
+      communication: avg([s("communication"), s("teamwork")]),
+      attitude: avg([s("ruleCompliance"), s("workAttitude"), s("pressureTolerance")]),
+      learning: avg([s("learningCapacity"), s("knowledge"), s("creativity")]),
+      coding: avg([s("practicalSkill"), s("contentRequirement"), s("progressRequirement")]),
+    };
+  }
+
+  return {
+    communication: typeof evaluation.communication === "number" ? evaluation.communication : 0,
+    attitude: typeof evaluation.attitude === "number" ? evaluation.attitude : 0,
+    learning: typeof evaluation.learning === "number" ? evaluation.learning : 0,
+    coding: typeof evaluation.coding === "number" ? evaluation.coding : 0,
+  };
+}
+
+function RatingBadge({ level }: { level?: RatingLevel | string | null }) {
   const tRatings = useTranslations("intern.weeklyEvaluation.ratings");
+  const isValidLevel =
+    typeof level === "string" &&
+    (level === "TOT" || level === "KHA" || level === "TB" || level === "TBY" || level === "YEU");
+
+  if (!isValidLevel || !level) {
+    return (
+      <span className="inline-flex items-center px-2 py-0.5 text-xs text-muted bg-white/5 rounded-lg border border-white/10 leading-none">
+        —
+      </span>
+    );
+  }
+
+  const colorClass = RATING_COLORS[level as RatingLevel] || "bg-white/5 text-muted border-white/10";
+  let label = level;
+  try {
+    label = tRatings(level as RatingLevel);
+  } catch {
+    label = level;
+  }
+
   return (
     <span
-      className={`inline-flex items-center px-2.5 py-0.5 text-xs font-semibold rounded-lg border leading-none ${RATING_COLORS[level]}`}
+      className={`inline-flex items-center px-2.5 py-0.5 text-xs font-semibold rounded-lg border leading-none ${colorClass}`}
     >
-      {tRatings(level)}
+      {label}
     </span>
   );
 }
@@ -83,9 +172,9 @@ function CriteriaTable({
           </div>
           <div className="divide-y divide-white/5">
             {section.criteria.map((criterion, idx) => {
-              const level = ratings[criterion.key];
-              const aiLevel = aiRatings?.[criterion.key];
-              const isDiff = aiLevel && aiLevel !== level;
+              const level = getRatingLevel(ratings, criterion.key);
+              const aiLevel = getRatingLevel(aiRatings, criterion.key);
+              const isDiff = Boolean(aiLevel && level && aiLevel !== level);
               return (
                 <div
                   key={criterion.key}
@@ -115,7 +204,7 @@ function CriteriaTable({
                       <div className="flex items-center gap-1">
                         <Sparkles className="h-3 w-3 text-sky-400 shrink-0" />
                         <span
-                          className={`text-xs px-2 py-0.5 rounded-lg border opacity-80 ${RATING_COLORS[aiLevel]}`}
+                          className={`text-xs px-2 py-0.5 rounded-lg border opacity-80 ${RATING_COLORS[aiLevel] || ""}`}
                           title={`AI: ${tRatings(aiLevel)}`}
                         >
                           AI: {tRatings(aiLevel)}
@@ -130,12 +219,16 @@ function CriteriaTable({
           </div>
           {(() => {
             const keys = section.criteria.map((c) => c.key);
-            const avg = parseFloat(
-              (
-                keys.map((k) => RATING_SCORES[ratings[k]]).reduce((a, b) => a + b, 0) /
-                keys.length
-              ).toFixed(1),
-            );
+            const validScores = keys
+              .map((k) => {
+                const lvl = getRatingLevel(ratings, k);
+                return lvl && RATING_SCORES[lvl] !== undefined ? RATING_SCORES[lvl] : null;
+              })
+              .filter((s): s is number => typeof s === "number");
+            const avg =
+              validScores.length > 0
+                ? validScores.reduce((a, b) => a + b, 0) / validScores.length
+                : 0;
             return (
               <div className="flex justify-end px-4 py-2.5 bg-white/[0.02] border-t border-white/5">
                 <span className="text-xs text-muted mr-2">
@@ -159,17 +252,17 @@ function LegacyScoreBars({
   learning,
   coding,
 }: {
-  communication: number;
-  attitude: number;
-  learning: number;
-  coding: number;
+  communication?: number;
+  attitude?: number;
+  learning?: number;
+  coding?: number;
 }) {
   const td = useTranslations("intern.weeklyEvaluation.detail");
   const items = [
-    { label: td("communication"), value: communication },
-    { label: td("attitude"), value: attitude },
-    { label: td("learning"), value: learning },
-    { label: td("coding"), value: coding },
+    { label: td("communication"), value: typeof communication === "number" ? communication : 0 },
+    { label: td("attitude"), value: typeof attitude === "number" ? attitude : 0 },
+    { label: td("learning"), value: typeof learning === "number" ? learning : 0 },
+    { label: td("coding"), value: typeof coding === "number" ? coding : 0 },
   ];
   return (
     <div className="space-y-6">
@@ -185,7 +278,7 @@ function LegacyScoreBars({
           <div className="h-2.5 w-full bg-white/5 rounded-full overflow-hidden border border-white/5">
             <div
               className="h-full bg-gradient-to-r from-primary-main to-primary-light rounded-full"
-              style={{ width: `${item.value * 10}%` }}
+              style={{ width: `${Math.min(100, Math.max(0, item.value * 10))}%` }}
             />
           </div>
         </div>
@@ -241,7 +334,9 @@ function ProgressChart({
       {groups.map((g) => {
         const prev = recent.slice(-2)[0];
         const curr = recent.slice(-1)[0];
-        const trend = curr[g.key] - prev[g.key];
+        const prevVal = typeof prev[g.key] === "number" ? prev[g.key] : 0;
+        const currVal = typeof curr[g.key] === "number" ? curr[g.key] : 0;
+        const trend = currVal - prevVal;
         return (
           <div key={g.key} className="space-y-2">
             <div className="flex items-center justify-between text-sm">
@@ -259,13 +354,14 @@ function ProgressChart({
                   </span>
                 ) : null}
                 <span className="text-sm font-bold text-primary-light">
-                  {curr[g.key].toFixed(1)} / 10
+                  {currVal.toFixed(1)} / 10
                 </span>
               </div>
             </div>
             <div className="flex items-end gap-1.5 h-12 pt-2">
               {recent.map((ev) => {
-                const val = ev[g.key];
+                const rawVal = ev[g.key];
+                const val = typeof rawVal === "number" && !Number.isNaN(rawVal) ? rawVal : 0;
                 const isCurrent = ev.week === currentWeek;
                 const heightPct = Math.max((val / 10) * 100, 8);
                 return (
@@ -334,7 +430,21 @@ function WeeklyEvaluationDetailContent() {
   const hasRatings = evaluation.ratings !== null && evaluation.ratings !== undefined;
   const ratings = evaluation.ratings as EvaluationRatings | null;
   const finalScore =
-    hasRatings && ratings ? computeTotalFromRatings(ratings) : evaluation.totalScore;
+    hasRatings && ratings
+      ? computeTotalFromRatings(ratings)
+      : typeof evaluation.score === "number"
+      ? evaluation.score
+      : typeof evaluation.totalScore === "number"
+      ? evaluation.totalScore
+      : 0;
+
+  const scores = getSubScores(evaluation);
+  const subScores = [
+    { label: td("communication"), value: scores.communication },
+    { label: td("attitude"), value: scores.attitude },
+    { label: td("learning"), value: scores.learning },
+    { label: td("coding"), value: scores.coding },
+  ];
   const isReviewed = !!(evaluation.viewedAt || evaluation.reviewedAt);
 
   const handleMarkReviewed = async () => {
@@ -460,10 +570,10 @@ function WeeklyEvaluationDetailContent() {
               <CriteriaTable ratings={ratings} aiRatings={evaluation.aiRatings} />
             ) : (
               <LegacyScoreBars
-                communication={evaluation.communication}
-                attitude={evaluation.attitude}
-                learning={evaluation.learning}
-                coding={evaluation.coding}
+                communication={evaluation.communication ?? 0}
+                attitude={evaluation.attitude ?? 0}
+                learning={evaluation.learning ?? 0}
+                coding={evaluation.coding ?? 0}
               />
             )}
           </MetalCard>
@@ -513,14 +623,17 @@ function WeeklyEvaluationDetailContent() {
               </div>
               <ProgressChart
                 currentWeek={evaluation.week}
-                allEvaluations={allEvaluations.map((e) => ({
-                  week: e.week,
-                  communication: e.communication,
-                  attitude: e.attitude,
-                  learning: e.learning,
-                  coding: e.coding,
-                  totalScore: e.totalScore,
-                }))}
+                allEvaluations={allEvaluations.map((e) => {
+                  const s = getSubScores(e);
+                  return {
+                    week: e.week,
+                    communication: s.communication,
+                    attitude: s.attitude,
+                    learning: s.learning,
+                    coding: s.coding,
+                    totalScore: typeof e.score === "number" ? e.score : (e.totalScore ?? 0),
+                  };
+                })}
               />
             </MetalCard>
           )}
@@ -540,34 +653,32 @@ function WeeklyEvaluationDetailContent() {
             {/* Score Big Display */}
             <div className="space-y-2">
               <div className="text-5xl sm:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-primary-light leading-none">
-                {finalScore.toFixed(2)}
+                {(finalScore ?? 0).toFixed(1)}
               </div>
               <div className="text-xs sm:text-sm text-muted">{td("outOf")}</div>
             </div>
 
             {/* Sub-scores bars */}
             <div className="pt-4 border-t border-border/40 space-y-2.5 text-xs">
-              {[
-                { label: td("communication"), value: evaluation.communication },
-                { label: td("attitude"), value: evaluation.attitude },
-                { label: td("learning"), value: evaluation.learning },
-                { label: td("coding"), value: evaluation.coding },
-              ].map(({ label, value }) => (
-                <div key={label} className="flex justify-between items-center">
-                  <span className="text-muted">{label}:</span>
-                  <div className="flex items-center gap-2">
-                    <div className="w-20 h-1.5 bg-white/5 rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-gradient-to-r from-primary-main to-primary-light rounded-full"
-                        style={{ width: `${value * 10}%` }}
-                      />
+              {subScores.map(({ label, value }) => {
+                const safeValue = typeof value === "number" && !Number.isNaN(value) ? value : 0;
+                return (
+                  <div key={label} className="flex justify-between items-center">
+                    <span className="text-muted">{label}:</span>
+                    <div className="flex items-center gap-2">
+                      <div className="w-20 h-1.5 bg-white/5 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-gradient-to-r from-primary-main to-primary-light rounded-full"
+                          style={{ width: `${Math.min(100, Math.max(0, safeValue * 10))}%` }}
+                        />
+                      </div>
+                      <span className="font-semibold text-foreground w-8 text-right">
+                        {safeValue.toFixed(1)}
+                      </span>
                     </div>
-                    <span className="font-semibold text-foreground w-8 text-right">
-                      {value.toFixed(1)}
-                    </span>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             {/* Meta Information */}

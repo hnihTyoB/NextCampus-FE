@@ -63,6 +63,47 @@ export type EvaluationCriteriaKey = keyof Omit<
   "resilience" | "practicalSkills" | "foreignLanguage" | "contentQuality" | "progressDelivery"
 >;
 
+export const RATING_ALIASES: Record<string, string> = {
+  resilience: "pressureTolerance",
+  pressureTolerance: "resilience",
+  practicalSkills: "practicalSkill",
+  practicalSkill: "practicalSkills",
+  foreignLanguage: "languageProficiency",
+  languageProficiency: "foreignLanguage",
+  contentQuality: "contentRequirement",
+  contentRequirement: "contentQuality",
+  progressDelivery: "progressRequirement",
+  progressRequirement: "progressDelivery",
+  attitude: "workAttitude",
+  learning: "learningCapacity",
+  coding: "practicalSkill",
+};
+
+export function getRatingLevel(
+  ratings?: EvaluationRatings | Record<string, unknown> | null,
+  key?: string
+): RatingLevel | undefined {
+  if (!ratings || !key) return undefined;
+  const raw = (ratings as Record<string, unknown>)[key];
+  if (
+    typeof raw === "string" &&
+    (raw === "TOT" || raw === "KHA" || raw === "TB" || raw === "TBY" || raw === "YEU")
+  ) {
+    return raw as RatingLevel;
+  }
+  const alias = RATING_ALIASES[key];
+  if (alias) {
+    const aliasVal = (ratings as Record<string, unknown>)[alias];
+    if (
+      typeof aliasVal === "string" &&
+      (aliasVal === "TOT" || aliasVal === "KHA" || aliasVal === "TB" || aliasVal === "TBY" || aliasVal === "YEU")
+    ) {
+      return aliasVal as RatingLevel;
+    }
+  }
+  return undefined;
+}
+
 export const CRITERIA_SECTIONS = [
   {
     id: "I",

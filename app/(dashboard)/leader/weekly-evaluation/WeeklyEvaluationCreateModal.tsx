@@ -34,7 +34,7 @@ function computeScores(ratings: EvaluationRatings) {
   const s = (k: keyof EvaluationRatings) =>
     ratings[k] ? RATING_SCORES[ratings[k] as RatingLevel] : 6;
   const avg = (nums: number[]) =>
-    parseFloat((nums.reduce((a, b) => a + b, 0) / nums.length).toFixed(2));
+    parseFloat((nums.reduce((a, b) => a + b, 0) / nums.length).toFixed(1));
 
   // Nhóm I: Kỷ luật & tư chất (5 tiêu chí)
   const group1 = avg([
@@ -95,17 +95,21 @@ function RatingSelector({
             type="button"
             disabled={disabled}
             onClick={() => onChange(level)}
-            className={`px-2.5 sm:px-3 py-1 text-xs font-semibold rounded-lg border transition-all duration-200 cursor-pointer select-none active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 disabled:opacity-50 disabled:cursor-not-allowed ${
+            className={`px-2.5 sm:px-3 py-1 text-xs font-semibold rounded-lg border transition-all duration-200 cursor-pointer select-none active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 dark:focus-visible:ring-cyan-400 disabled:opacity-50 disabled:cursor-not-allowed ${
               isSelected
                 ? `${RATING_COLORS[level]} border-current ring-1 ring-current scale-105 shadow-sm`
                 : isAi
-                ? "border-sky-400/40 text-sky-300 bg-sky-500/10 hover:bg-sky-500/20"
-                : "border-white/10 text-muted bg-white/[0.03] hover:border-white/20 hover:text-foreground hover:bg-white/[0.06]"
+                ? "border-sky-300 bg-sky-100/80 text-sky-700 hover:bg-sky-200/80 dark:border-sky-400/40 dark:text-sky-300 dark:bg-sky-500/10 dark:hover:bg-sky-500/20"
+                : "border-border text-muted bg-slate-100/70 hover:border-slate-300 hover:text-foreground hover:bg-slate-200/60 dark:border-white/10 dark:text-muted dark:bg-white/[0.03] dark:hover:border-white/20 dark:hover:text-foreground dark:hover:bg-white/[0.06]"
             }`}
             title={isAi ? `AI gợi ý: ${label}` : label}
           >
             {label}
-            {isAi && <span className="ml-1 opacity-80 text-[9px] font-bold text-sky-400">AI</span>}
+            {isAi && (
+              <span className="ml-1 opacity-80 text-[9px] font-bold text-sky-600 dark:text-sky-400">
+                AI
+              </span>
+            )}
           </button>
         );
       })}
@@ -417,10 +421,10 @@ export default function WeeklyEvaluationCreateModal({ onCloseModal, onSuccess }:
 
   return (
     <div className="flex flex-col">
-      {/* Standardized Sticky Modal Header (Rule 215-218) */}
-      <div className="sticky top-0 z-20 bg-[#0c1222]/95 backdrop-blur-xl pb-4 pt-1 -mt-1 border-b border-white/10 pr-10 sm:pr-12">
+      {/* Standardized Sticky Modal Header (Rule 2.3 & 3.3 Compliant) */}
+      <div className="sticky top-0 z-20 bg-white/95 dark:bg-[#0c1222]/95 backdrop-blur-xl pb-4 pt-1 -mt-1 border-b border-border dark:border-white/10 pr-10 sm:pr-12">
         <div className="flex items-center gap-3 min-w-0">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-cyan-500/20 bg-cyan-500/10 text-cyan-400 shadow-[0_0_16px_rgba(6,182,212,0.15)]">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-cyan-300 bg-cyan-100 text-cyan-700 shadow-sm dark:border-cyan-500/30 dark:bg-cyan-500/15 dark:text-cyan-300 dark:shadow-[0_0_12px_rgba(6,182,212,0.2)]">
             <Sparkles className="h-5 w-5" />
           </div>
           <div className="min-w-0 flex-1">
@@ -447,7 +451,7 @@ export default function WeeklyEvaluationCreateModal({ onCloseModal, onSuccess }:
           </div>
           <div>
             <label className="text-xs sm:text-sm font-medium text-foreground/90 select-none flex items-center gap-1 mb-1.5">
-              {t("week")} <span className="text-destructive">*</span>
+              {t("week")} <span className="text-destructive font-bold">*</span>
             </label>
             <input
               type="number"
@@ -455,7 +459,7 @@ export default function WeeklyEvaluationCreateModal({ onCloseModal, onSuccess }:
               max={maxWeek}
               value={week}
               onChange={(e) => setWeek(Number(e.target.value))}
-              className="h-[42px] sm:h-[46px] w-full rounded-xl border border-border bg-card dark:border-white/10 dark:bg-white/5 px-4 py-2.5 sm:py-3 text-xs sm:text-sm text-foreground placeholder:text-muted transition focus:border-cyan-500/50 focus:outline-none focus:ring-1 focus:ring-cyan-500/50"
+              className="h-[42px] sm:h-[46px] w-full rounded-xl border border-border bg-card dark:border-white/10 dark:bg-white/5 px-4 py-2.5 sm:py-3 text-xs sm:text-sm text-foreground placeholder:text-muted transition focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500/40 dark:focus:border-cyan-400/50 dark:focus:ring-cyan-400/30"
               required
             />
             {selectedIntern && (
@@ -464,19 +468,19 @@ export default function WeeklyEvaluationCreateModal({ onCloseModal, onSuccess }:
                   {t("currentWeek", { week: maxWeek, max: maxWeek })}
                 </p>
                 {Number(week) === maxWeek && isInternMidWeekThisWeek(selectedIntern) && (
-                  <p className="text-[11px] text-amber-400 font-semibold">
+                  <p className="text-[11px] text-amber-600 dark:text-amber-400 font-semibold">
                     {t("assignedMidWeekNotice")}
                   </p>
                 )}
                 {Number(week) === maxWeek &&
                   !isInternMidWeekThisWeek(selectedIntern) &&
                   !isWeekendAllowedForCurrentWeek && (
-                    <p className="text-[11px] text-amber-400 font-semibold">
+                    <p className="text-[11px] text-amber-600 dark:text-amber-400 font-semibold">
                       {t("weekendNotice", { day: startDayName })}
                     </p>
                   )}
                 {evaluatedWeeks.includes(Number(week)) && (
-                  <p className="text-[11px] text-destructive font-semibold">
+                  <p className="text-[11px] text-rose-600 dark:text-rose-400 font-semibold">
                     {t("weekAlreadyEvaluated")}
                   </p>
                 )}
@@ -487,17 +491,17 @@ export default function WeeklyEvaluationCreateModal({ onCloseModal, onSuccess }:
 
         {/* Human-in-the-Loop AI Draft Preview banner */}
         {aiRatings && (
-          <div className="flex items-center justify-between rounded-xl border border-sky-400/30 bg-sky-500/10 p-3 sm:p-4 text-xs text-sky-200">
+          <div className="flex items-center justify-between rounded-xl border border-sky-300 bg-sky-50 text-sky-900 dark:border-sky-400/30 dark:bg-sky-500/10 dark:text-sky-200 p-3 sm:p-4 text-xs">
             <div className="flex items-start gap-2.5 min-w-0">
-              <Bot className="h-4 w-4 shrink-0 text-sky-400 mt-0.5" />
+              <Bot className="h-4 w-4 shrink-0 text-sky-600 dark:text-sky-400 mt-0.5" />
               <div>
-                <span className="font-semibold">{t("draftPreviewNotice")}</span>
-                <p className="text-[11px] text-sky-300/80 mt-0.5">
+                <span className="font-semibold text-sky-950 dark:text-sky-100">{t("draftPreviewNotice")}</span>
+                <p className="text-[11px] text-sky-800/80 dark:text-sky-300/80 mt-0.5">
                   Bạn có thể điều chỉnh bất kỳ tiêu chí nào hoặc viết lại nhận xét trước khi lưu chính thức.
                 </p>
               </div>
             </div>
-            <span className="rounded-md border border-sky-400/40 bg-sky-500/20 px-2.5 py-1 font-bold uppercase text-[10px] text-sky-300 shrink-0 ml-3">
+            <span className="rounded-md border border-sky-300 bg-sky-100 text-sky-700 dark:border-sky-400/40 dark:bg-sky-500/20 dark:text-sky-300 px-2.5 py-1 font-bold uppercase text-[10px] shrink-0 ml-3">
               {t("draftBadge")}
             </span>
           </div>
@@ -515,53 +519,53 @@ export default function WeeklyEvaluationCreateModal({ onCloseModal, onSuccess }:
             disabled={aiSuggestion.isPending || !internId}
             className="flex items-center gap-1.5"
           >
-            <Sparkles className="h-3.5 w-3.5 text-cyan-400 shrink-0" />
+            <Sparkles className="h-3.5 w-3.5 text-cyan-600 dark:text-cyan-400 shrink-0" />
             <span>{t("getAiSuggestion")}</span>
           </Button>
         </div>
 
         {/* 3-Group Score preview bar */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 rounded-2xl border border-cyan-500/20 bg-cyan-500/5 p-3.5">
-          <div className="text-center p-2 rounded-xl bg-white/[0.02]">
-            <div className="text-[11px] text-muted mb-0.5">I. Kỷ luật</div>
-            <div className="text-sm sm:text-base font-bold text-cyan-300">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 rounded-2xl border border-cyan-200 bg-cyan-50/60 dark:border-cyan-500/20 dark:bg-cyan-500/5 p-3.5">
+          <div className="text-center p-2 rounded-xl bg-white/80 dark:bg-white/[0.02] border border-cyan-100/60 dark:border-transparent shadow-xs dark:shadow-none">
+            <div className="text-[11px] text-muted mb-0.5 font-medium">I. Kỷ luật</div>
+            <div className="text-sm sm:text-base font-bold text-cyan-700 dark:text-cyan-300">
               {scores.group1.toFixed(1)}
             </div>
           </div>
-          <div className="text-center p-2 rounded-xl bg-white/[0.02]">
-            <div className="text-[11px] text-muted mb-0.5">II. Chuyên môn</div>
-            <div className="text-sm sm:text-base font-bold text-cyan-300">
+          <div className="text-center p-2 rounded-xl bg-white/80 dark:bg-white/[0.02] border border-cyan-100/60 dark:border-transparent shadow-xs dark:shadow-none">
+            <div className="text-[11px] text-muted mb-0.5 font-medium">II. Chuyên môn</div>
+            <div className="text-sm sm:text-base font-bold text-cyan-700 dark:text-cyan-300">
               {scores.group2.toFixed(1)}
             </div>
           </div>
-          <div className="text-center p-2 rounded-xl bg-white/[0.02]">
-            <div className="text-[11px] text-muted mb-0.5">III. Đề tài</div>
-            <div className="text-sm sm:text-base font-bold text-cyan-300">
+          <div className="text-center p-2 rounded-xl bg-white/80 dark:bg-white/[0.02] border border-cyan-100/60 dark:border-transparent shadow-xs dark:shadow-none">
+            <div className="text-[11px] text-muted mb-0.5 font-medium">III. Đề tài</div>
+            <div className="text-sm sm:text-base font-bold text-cyan-700 dark:text-cyan-300">
               {scores.group3.toFixed(1)}
             </div>
           </div>
-          <div className="text-center p-2 rounded-xl bg-cyan-500/10 border border-cyan-500/30">
-            <div className="text-[11px] text-cyan-200 mb-0.5 font-medium">{t("totalScore")}</div>
-            <div className="text-lg sm:text-xl font-black text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-cyan-300">
-              {scores.totalScore.toFixed(2)}
+          <div className="text-center p-2 rounded-xl bg-cyan-100/80 border border-cyan-300 dark:bg-cyan-500/10 dark:border-cyan-500/30 shadow-xs dark:shadow-none">
+            <div className="text-[11px] text-cyan-800 dark:text-cyan-200 mb-0.5 font-semibold">{t("totalScore")}</div>
+            <div className="text-lg sm:text-xl font-black text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 to-cyan-600 dark:from-emerald-400 dark:to-cyan-300">
+              {scores.totalScore.toFixed(1)}
             </div>
           </div>
         </div>
 
         {/* 12 Criteria grouped by 3 sections */}
-        <div className="space-y-3 border-t border-white/10 pt-4">
+        <div className="space-y-3 border-t border-border dark:border-white/10 pt-4">
           {CRITERIA_SECTIONS.map((section) => (
             <div
               key={section.id}
-              className="rounded-2xl border border-white/10 overflow-hidden bg-white/[0.01]"
+              className="rounded-2xl border border-border dark:border-white/10 overflow-hidden bg-card/60 dark:bg-white/[0.01]"
             >
               <button
                 type="button"
                 onClick={() => toggleSection(section.id)}
-                className="w-full flex items-center justify-between px-4 py-3 bg-white/[0.03] hover:bg-white/[0.06] transition-colors cursor-pointer"
+                className="w-full flex items-center justify-between px-4 py-3 bg-slate-50/80 hover:bg-slate-100/80 dark:bg-white/[0.03] dark:hover:bg-white/[0.06] transition-colors cursor-pointer"
               >
                 <div className="flex items-center gap-2.5">
-                  <span className="flex h-6 w-6 items-center justify-center rounded-md bg-cyan-500/20 text-xs font-bold text-cyan-300 shrink-0">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-md bg-cyan-100 text-cyan-700 border border-cyan-300 dark:bg-cyan-500/20 dark:border-transparent dark:text-cyan-300 text-xs font-bold shrink-0">
                     {section.id}
                   </span>
                   <span className="text-sm font-semibold text-foreground">
@@ -579,11 +583,11 @@ export default function WeeklyEvaluationCreateModal({ onCloseModal, onSuccess }:
               </button>
 
               {expandedSections[section.id] && (
-                <div className="divide-y divide-white/5">
+                <div className="divide-y divide-border/60 dark:divide-white/5">
                   {section.criteria.map((criterion, idx) => (
                     <div
                       key={criterion.key}
-                      className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 py-3 hover:bg-white/[0.02] transition-colors"
+                      className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 py-3 hover:bg-slate-50/80 dark:hover:bg-white/[0.02] transition-colors"
                     >
                       <div className="flex items-center gap-2 min-w-0 flex-1">
                         <span className="text-xs text-muted font-mono shrink-0">
@@ -597,14 +601,14 @@ export default function WeeklyEvaluationCreateModal({ onCloseModal, onSuccess }:
                         </span>
                         {criterion.tooltip && (
                           <span
-                            className="text-muted hover:text-cyan-400 cursor-help transition shrink-0"
+                            className="text-muted hover:text-cyan-600 dark:hover:text-cyan-400 cursor-help transition shrink-0"
                             title={criterion.tooltip}
                           >
                             <Info className="h-3.5 w-3.5" />
                           </span>
                         )}
                         {aiRatings?.[criterion.key] && (
-                          <span className="inline-flex items-center gap-1 rounded-md border border-sky-400/30 bg-sky-500/10 px-1.5 py-0.5 text-[10px] font-medium text-sky-300 shrink-0">
+                          <span className="inline-flex items-center gap-1 rounded-md border border-sky-300 bg-sky-100/80 text-sky-700 dark:border-sky-400/30 dark:bg-sky-500/10 dark:text-sky-300 px-1.5 py-0.5 text-[10px] font-medium shrink-0">
                             <Sparkles className="h-2.5 w-2.5" />
                             {t("aiSuggestedBadge")}
                           </span>
@@ -637,12 +641,12 @@ export default function WeeklyEvaluationCreateModal({ onCloseModal, onSuccess }:
             value={comment}
             onChange={(e) => setComment(e.target.value)}
             maxLength={2000}
-            className="w-full rounded-xl border border-border bg-card dark:border-white/10 dark:bg-white/5 p-4 text-xs sm:text-sm text-foreground placeholder:text-muted transition focus:border-cyan-500/50 focus:outline-none focus:ring-1 focus:ring-cyan-500/50 resize-none scrollbar-dropdown"
+            className="w-full rounded-xl border border-border bg-card dark:border-white/10 dark:bg-white/5 p-4 text-xs sm:text-sm text-foreground placeholder:text-muted transition focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500/40 dark:focus:border-cyan-400/50 dark:focus:ring-cyan-400/30 resize-none scrollbar-dropdown"
           />
           {aiComment && aiComment !== comment && (
             <button
               type="button"
-              className="mt-1.5 text-xs text-cyan-400 hover:text-cyan-300 flex items-center gap-1.5 transition cursor-pointer"
+              className="mt-1.5 text-xs text-cyan-600 hover:text-cyan-700 dark:text-cyan-400 dark:hover:text-cyan-300 flex items-center gap-1.5 transition cursor-pointer font-medium"
               onClick={() => setComment(aiComment)}
             >
               <Sparkles className="h-3.5 w-3.5 shrink-0" />
@@ -652,7 +656,7 @@ export default function WeeklyEvaluationCreateModal({ onCloseModal, onSuccess }:
         </div>
 
         {/* Modal Actions */}
-        <div className="flex justify-end gap-3 pt-4 border-t border-white/10">
+        <div className="flex justify-end gap-3 pt-4 border-t border-border dark:border-white/10">
           <Button
             type="button"
             variant="glass"
