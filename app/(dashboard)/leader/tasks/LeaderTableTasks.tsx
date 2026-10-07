@@ -30,6 +30,10 @@ import { AuthContext } from "@/contexts/AuthContext";
 import { useRBAC } from "@/hooks/rbac/useRBAC";
 import TaskEditModal from "./TaskEditModal";
 import TaskGroupMemberSelector from "./TaskGroupMemberSelector";
+import LeaderTaskViewModeToggle, { type LeaderViewMode } from "./LeaderTaskViewModeToggle";
+import LeaderKanbanBoard from "./LeaderKanbanBoard";
+import LeaderDependencyGraph from "./LeaderDependencyGraph";
+import TaskViewModal from "./TaskViewModal";
 import { useForm } from "react-hook-form";
 import { useQueryClient } from "@tanstack/react-query";
 import {
@@ -63,6 +67,18 @@ export default function LeaderTableTasks() {
   const router = useRouter();
 
   const taskGroupId = searchParams.get("taskGroupId") ?? null;
+  const viewMode: LeaderViewMode = (searchParams.get("view") as LeaderViewMode) || "table";
+  const [selectedViewTask, setSelectedViewTask] = useState<Task | null>(null);
+
+  const handleViewModeChange = (mode: LeaderViewMode) => {
+    const p = new URLSearchParams(searchParams.toString());
+    if (mode === "table") {
+      p.delete("view");
+    } else {
+      p.set("view", mode);
+    }
+    router.push(`${pathname}?${p.toString()}`, { scroll: false });
+  };
 
   const openTaskAction = (a: { type: "edit" | "delete"; taskId: string; taskTitle: string }) => {
     setTaskAction(a);
@@ -125,12 +141,13 @@ export default function LeaderTableTasks() {
     if (deadlineTo) p.deadlineTo = deadlineTo;
     if (taskGroupId) p.taskGroupId = taskGroupId;
     if (page) p.page = Number(page);
-    p.limit = limit ? Number(limit) : 10;
+    const defaultLimit = viewMode === "table" ? 10 : 100;
+    p.limit = limit ? Number(limit) : defaultLimit;
     if (sortBy) p.sortBy = sortBy as TaskQueryParams["sortBy"];
     if (order) p.order = order as TaskQueryParams["order"];
 
     return p;
-  }, [searchParams, taskGroupId]);
+  }, [searchParams, taskGroupId, viewMode]);
 
   const { data: tasksData, isLoading: tasksLoading, refetch: tasksRefetch, isFetching: tasksFetching } = useTasks(params);
   const tasks = useMemo(() => extractTasks(tasksData?.data), [tasksData]);
@@ -219,9 +236,9 @@ export default function LeaderTableTasks() {
           </div>
         </MetalCard>
 
-        {/* Right: Task Table */}
+        {/* Right: Task Table / Kanban / Graph */}
         <div className="min-h-[240px] min-w-0 flex flex-col space-y-3">
-          <div className="flex items-center justify-between px-1">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-1">
             <div className="flex items-center">
               <h3 className="text-sm font-semibold">
                 <span className="metal-text">{t("tasks")}</span>
@@ -230,6 +247,10 @@ export default function LeaderTableTasks() {
                 )}
               </h3>
             </div>
+
+            <div className="flex items-center gap-2 flex-wrap">
+              <LeaderTaskViewModeToggle mode={viewMode} onChange={handleViewModeChange} />
+
               {taskGroupId && can("TASK_ASSIGNMENT_CREATE") && (
                 <Button
                   variant="glass"
@@ -247,9 +268,28 @@ export default function LeaderTableTasks() {
                 </Button>
               )}
             </div>
-            {tasksLoading ? (
-              <div className="flex justify-center py-12"><Spinner /></div>
-            ) : tasks.length > 0 ? (
+          </div>
+
+          {tasksLoading ? (
+            <div className="flex justify-center py-12"><Spinner /></div>
+          ) : viewMode === "kanban" ? (
+            <LeaderKanbanBoard
+              tasks={tasks}
+              onSelectTask={(task) => setSelectedViewTask(task)}
+              onOpenReview={handleOpenReview}
+              onOpenReviewExtension={handleOpenReviewExtension}
+              onUnblockTask={handleUnblockTask}
+              isUnblocking={unblockTask.isPending}
+              onOpenAiAssign={(tData) => setAiTask(tData)}
+              onRefresh={tasksRefetch}
+              isRefreshing={tasksFetching}
+            />
+          ) : viewMode === "graph" ? (
+            <LeaderDependencyGraph
+              tasks={tasks}
+              onSelectTask={(task) => setSelectedViewTask(task)}
+            />
+          ) : tasks.length > 0 ? (
               <>
                 {/* Mobile Card List (md:hidden) */}
                 <div className="md:hidden space-y-3">
@@ -395,6 +435,14 @@ export default function LeaderTableTasks() {
         groupId={groupAiModal.groupId}
         groupName={groupAiModal.groupName}
         onClose={() => setGroupAiModal(null)}
+      />
+    )}
+
+    {/* Task View Modal */}
+    {selectedViewTask && (
+      <TaskViewModal
+        task={selectedViewTask}
+        onClose={() => setSelectedViewTask(null)}
       />
     )}
     </>
@@ -1927,8 +1975,16 @@ function InlineAssignCell({
 /* ─── Badges ────────────────────────────────────────────────── */
 
 function PriorityBadge({ priority }: { priority: string }) {
-  const colors: Record<string, string> = { HIGH: "bg-red-500/10 text-red-400", MEDIUM: "bg-amber-500/10 text-amber-400", LOW: "bg-emerald-500/10 text-emerald-400" };
-  return <span className={`inline-flex rounded-lg px-2 py-0.5 text-xs ${colors[priority] ?? "bg-white/5 text-muted"}`}>{priority}</span>;
+  const colors: Record<string, string> = {
+    HIGH: "border border-red-300 bg-red-100/80 text-red-800 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-400",
+    MEDIUM: "border border-amber-300 bg-amber-100/80 text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-400",
+    LOW: "border border-emerald-300 bg-emerald-100/80 text-emerald-800 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-400",
+  };
+  return (
+    <span className={`inline-flex rounded-lg px-2 py-0.5 text-xs font-medium ${colors[priority] ?? "border border-border bg-card text-muted"}`}>
+      {priority}
+    </span>
+  );
 }
 
 function StatusBadge({
@@ -1954,14 +2010,37 @@ function StatusBadge({
   const canReview = can("TASK_SUBMISSION_REVIEW");
 
   const colors: Record<string, string> = {
-    DONE: "border-emerald-500/30 bg-emerald-500/10 text-emerald-300",
-    IN_PROGRESS: "border-sky-500/30 bg-sky-500/10 text-sky-300",
-    REVIEW: "border-purple-500/30 bg-purple-500/10 text-purple-300",
-    TODO: "border-slate-700 bg-slate-800/60 text-slate-400",
-    BLOCKED: "border-rose-500/30 bg-rose-500/10 text-rose-300",
-    PENDING_APPROVAL: "border-amber-500/30 bg-amber-500/10 text-amber-300",
-    EXTENSION_PENDING: "border-amber-400/40 bg-amber-500/15 text-amber-300 font-bold animate-pulse shadow-[0_0_12px_rgba(245,158,11,0.2)]",
-    UNASSIGNED: "border-orange-500/30 bg-orange-500/10 text-orange-300",
+    DONE: "border-emerald-300 bg-emerald-100/80 text-emerald-800 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300",
+    IN_PROGRESS: "border-sky-300 bg-sky-100/80 text-sky-800 dark:border-sky-500/30 dark:bg-sky-500/10 dark:text-sky-300",
+    REVIEW: "border-purple-300 bg-purple-100/80 text-purple-800 dark:border-purple-500/30 dark:bg-purple-500/10 dark:text-purple-300",
+    TODO: "border-slate-300 bg-slate-100/90 text-slate-700 dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-400",
+    BLOCKED: "border-rose-300 bg-rose-100/80 text-rose-800 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-300",
+    PENDING_APPROVAL: "border-amber-300 bg-amber-100/80 text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300",
+    EXTENSION_PENDING: "border-amber-300 bg-amber-100/90 text-amber-800 font-bold animate-pulse shadow-xs dark:border-amber-400/40 dark:bg-amber-500/15 dark:text-amber-300 dark:shadow-[0_0_12px_rgba(245,158,11,0.2)]",
+    UNASSIGNED: "border-orange-300 bg-orange-100/80 text-orange-800 dark:border-orange-500/30 dark:bg-orange-500/10 dark:text-orange-300",
+  };
+
+  const getStatusLabel = (s: string) => {
+    switch (s) {
+      case "TODO":
+        return t("statusTodo");
+      case "IN_PROGRESS":
+        return t("statusInProgress");
+      case "REVIEW":
+        return t("statusReview");
+      case "DONE":
+        return t("statusDone");
+      case "BLOCKED":
+        return t("statusBlocked");
+      case "PENDING_APPROVAL":
+        return t("statusPendingApproval");
+      case "EXTENSION_PENDING":
+        return t("statusExtensionPending");
+      case "UNASSIGNED":
+        return t("statusUnassigned");
+      default:
+        return s.replace("_", " ");
+    }
   };
 
   if (status === "DONE") {
@@ -1970,8 +2049,8 @@ function StatusBadge({
         title={t("completedTaskReadOnly")}
         className={`inline-flex items-center gap-1 rounded-lg border px-2 py-0.5 text-xs font-medium ${colors[status] ?? "border-border bg-card text-muted"}`}
       >
-        <Check className="h-3 w-3 shrink-0 text-emerald-400" />
-        {status.replace("_", " ")}
+        <Check className="h-3 w-3 shrink-0 text-emerald-600 dark:text-emerald-400" />
+        {getStatusLabel(status)}
       </span>
     );
   }
@@ -1982,7 +2061,7 @@ function StatusBadge({
         <span
           className={`inline-flex items-center gap-1 rounded-lg border px-2 py-0.5 text-xs font-medium ${colors[status] ?? "border-border bg-card text-muted"}`}
         >
-          {status.replace("_", " ")}
+          {getStatusLabel(status)}
         </span>
         <button
           type="button"
@@ -1992,7 +2071,7 @@ function StatusBadge({
           }}
           disabled={isUnblocking}
           title={t("unblockTask")}
-          className="inline-flex items-center gap-1 rounded-md border border-sky-400/40 bg-sky-500/15 px-1.5 py-0.5 text-[11px] font-semibold text-sky-300 hover:bg-sky-500/25 hover:border-sky-400/60 transition disabled:opacity-50 cursor-pointer"
+          className="inline-flex items-center gap-1 rounded-md border border-sky-300 bg-sky-100/90 px-1.5 py-0.5 text-[11px] font-semibold text-sky-800 hover:bg-sky-200/90 hover:border-sky-400 transition disabled:opacity-50 cursor-pointer dark:border-sky-400/40 dark:bg-sky-500/15 dark:text-sky-300 dark:hover:bg-sky-500/25 dark:hover:border-sky-400/60"
         >
           {isUnblocking ? (
             <Loader2 className="h-2.5 w-2.5 animate-spin shrink-0" />
@@ -2014,9 +2093,9 @@ function StatusBadge({
           onReviewExtensionClick(assignmentId);
         }}
         title={t("reviewExtension")}
-        className="inline-flex items-center gap-1.5 rounded-lg border border-amber-400/40 bg-amber-500/15 px-2 py-0.5 text-xs font-semibold text-amber-300 hover:bg-amber-500/25 transition cursor-pointer animate-pulse shadow-[0_0_12px_rgba(245,158,11,0.2)]"
+        className="inline-flex items-center gap-1.5 rounded-lg border border-amber-300 bg-amber-100/90 px-2 py-0.5 text-xs font-semibold text-amber-800 hover:bg-amber-200/90 transition cursor-pointer animate-pulse shadow-xs dark:border-amber-400/40 dark:bg-amber-500/15 dark:text-amber-300 dark:hover:bg-amber-500/25 dark:shadow-[0_0_12px_rgba(245,158,11,0.2)]"
       >
-        <Clock className="h-3 w-3 shrink-0 text-amber-400" />
+        <Clock className="h-3 w-3 shrink-0 text-amber-600 dark:text-amber-400" />
         {t("statusExtensionPending")}
       </button>
     );
@@ -2029,8 +2108,8 @@ function StatusBadge({
         onClick={() => onReviewClick(assignmentId, taskId)}
         className={`inline-flex items-center gap-1 rounded-lg border px-2 py-0.5 text-xs cursor-pointer transition hover:scale-105 hover:opacity-90 font-medium ${colors[status] ?? "border-border bg-card text-muted"}`}
       >
-        <span className="h-1.5 w-1.5 rounded-full bg-purple-400 animate-pulse" />
-        {status.replace("_", " ")}
+        <span className="h-1.5 w-1.5 rounded-full bg-purple-500 dark:bg-purple-400 animate-pulse" />
+        {getStatusLabel(status)}
       </button>
     );
   }
@@ -2039,7 +2118,7 @@ function StatusBadge({
     <span
       className={`inline-flex rounded-lg border px-2 py-0.5 text-xs font-medium ${colors[status] ?? "border-border bg-card text-muted"}`}
     >
-      {status.replace("_", " ")}
+      {getStatusLabel(status)}
     </span>
   );
 }

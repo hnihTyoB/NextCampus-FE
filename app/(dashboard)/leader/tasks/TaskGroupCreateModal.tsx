@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { Layers, AlertCircle } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -19,7 +19,7 @@ export default function TaskGroupCreateModal({ onCloseModal }: Props) {
   const t = useTranslations("taskGroups");
   const createTaskGroup = useCreateTaskGroup();
   const { data: deptData, isLoading: deptsLoading } = useDepartments();
-  const departments = deptData?.data ?? [];
+  const departments = useMemo(() => deptData?.data ?? [], [deptData?.data]);
   const [departmentId, setDepartmentId] = useState("");
   const [memberIds, setMemberIds] = useState<string[]>([]);
 
@@ -27,7 +27,6 @@ export default function TaskGroupCreateModal({ onCloseModal }: Props) {
     register,
     handleSubmit,
     reset,
-    watch,
     setValue,
     formState: { errors },
   } = useForm<CreateTaskGroupPayload>({
@@ -39,11 +38,14 @@ export default function TaskGroupCreateModal({ onCloseModal }: Props) {
     },
   });
 
+  const effectiveDepartmentId =
+    departmentId || (departments.length > 0 ? departments[0].id : "");
+
   const onSubmit = (data: CreateTaskGroupPayload) => {
     createTaskGroup.mutate(
       {
         ...data,
-        departmentId: data.departmentId || null,
+        departmentId: effectiveDepartmentId || null,
         memberIds,
       },
       {
@@ -111,7 +113,7 @@ export default function TaskGroupCreateModal({ onCloseModal }: Props) {
             {t("deptLabel")}
           </label>
           <Select
-            value={watch("departmentId") ?? ""}
+            value={effectiveDepartmentId}
             onChange={(val) => {
               setValue("departmentId", val);
               setDepartmentId(val);

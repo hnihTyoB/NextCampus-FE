@@ -1,6 +1,7 @@
 "use client";
 
 import { createPortal } from "react-dom";
+import { useTranslations } from "next-intl";
 import {
   X,
   Calendar,
@@ -22,18 +23,20 @@ type Props = {
 };
 
 const priorityBadge: Record<string, string> = {
-  HIGH: "bg-rose-500/10 text-rose-400 border border-rose-500/20",
-  MEDIUM: "bg-amber-500/10 text-amber-400 border border-amber-500/20",
-  LOW: "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20",
+  HIGH: "border border-red-300 bg-red-100/80 text-red-800 dark:border-rose-500/20 dark:bg-rose-500/10 dark:text-rose-400",
+  MEDIUM: "border border-amber-300 bg-amber-100/80 text-amber-800 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-400",
+  LOW: "border border-emerald-300 bg-emerald-100/80 text-emerald-800 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-400",
 };
 
 const statusBadge: Record<string, string> = {
-  DONE: "border-emerald-500/30 bg-emerald-500/10 text-emerald-300",
-  IN_PROGRESS: "border-blue-500/30 bg-blue-500/10 text-blue-300",
-  REVIEW: "border-purple-500/30 bg-purple-500/10 text-purple-300",
-  TODO: "border-slate-700 bg-slate-800/50 text-slate-400",
-  BLOCKED: "border-red-500/30 bg-red-500/10 text-red-300",
-  PENDING_APPROVAL: "border-amber-500/30 bg-amber-500/10 text-amber-300",
+  DONE: "border-emerald-300 bg-emerald-100/80 text-emerald-800 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300",
+  IN_PROGRESS: "border-sky-300 bg-sky-100/80 text-sky-800 dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-300",
+  REVIEW: "border-purple-300 bg-purple-100/80 text-purple-800 dark:border-purple-500/30 dark:bg-purple-500/10 dark:text-purple-300",
+  TODO: "border-slate-300 bg-slate-100/90 text-slate-700 dark:border-slate-700 dark:bg-slate-800/50 dark:text-slate-400",
+  BLOCKED: "border-rose-300 bg-rose-100/80 text-rose-800 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-300",
+  PENDING_APPROVAL: "border-amber-300 bg-amber-100/80 text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300",
+  EXTENSION_PENDING: "border-amber-300 bg-amber-100/90 text-amber-800 font-bold dark:border-amber-400/40 dark:bg-amber-500/15 dark:text-amber-300",
+  UNASSIGNED: "border-orange-300 bg-orange-100/80 text-orange-800 dark:border-orange-500/30 dark:bg-orange-500/10 dark:text-orange-300",
 };
 
 function getFileIcon(mime: string) {
@@ -55,6 +58,31 @@ function formatSize(bytes: number) {
 }
 
 export default function TaskViewModal({ task, onClose }: Props) {
+  const t = useTranslations("leader.tasks");
+
+  const getStatusLabel = (s: string) => {
+    switch (s) {
+      case "TODO":
+        return t("statusTodo");
+      case "IN_PROGRESS":
+        return t("statusInProgress");
+      case "REVIEW":
+        return t("statusReview");
+      case "DONE":
+        return t("statusDone");
+      case "BLOCKED":
+        return t("statusBlocked");
+      case "PENDING_APPROVAL":
+        return t("statusPendingApproval");
+      case "EXTENSION_PENDING":
+        return t("statusExtensionPending");
+      case "UNASSIGNED":
+        return t("statusUnassigned");
+      default:
+        return s.replace("_", " ");
+    }
+  };
+
   return createPortal(
     <div
       className="fixed inset-0 z-[110] flex items-start justify-center bg-black/75 p-4 pt-[5vh] backdrop-blur-md"
@@ -82,8 +110,8 @@ export default function TaskViewModal({ task, onClose }: Props) {
                 </span>
               )}
               {task.assignment?.status && (
-                <span className={`inline-flex rounded-lg px-2 py-0.5 text-xs font-medium ${statusBadge[task.assignment.status] ?? ""}`}>
-                  {task.assignment.status.replace("_", " ")}
+                <span className={`inline-flex rounded-lg px-2 py-0.5 text-xs font-medium border ${statusBadge[task.assignment.status] ?? "border-border bg-card text-muted"}`}>
+                  {getStatusLabel(task.assignment.status)}
                 </span>
               )}
             </div>

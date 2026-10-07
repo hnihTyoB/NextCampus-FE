@@ -309,3 +309,12 @@ Chỉ lưu các quyết định kiến trúc và UI/UX đã được xác nhận
     />
     ```
 
+- **2026-10-07 — Đồng Bộ Chế Độ Xem Bảng / Kanban / Sơ Đồ Phụ Thuộc Cho Quản Lý (Leader Task View Modes)**:
+  - **Mục đích**: Đồng bộ trải nghiệm xem công việc giữa Leader và Intern, cho phép Leader quan sát luồng tiến độ Sprint theo 5 cột trạng thái và phát hiện điểm nghẽn dự án qua sơ đồ quan hệ phụ thuộc Topological (DAG).
+  - **Thành phần tích hợp (`app/(dashboard)/leader/tasks/`)**:
+    * `LeaderTaskViewModeToggle`: Cụm 3 nút chuyển chế độ xem: `[ Dạng Bảng ]` / `[ Bảng Kanban ]` / `[ Sơ Đồ Phụ Thuộc ]`, đồng bộ hai chiều với URL search query (`?view=table|kanban|graph`).
+    * `LeaderKanbanBoard`: 5 cột trạng thái chuẩn (`TODO`, `IN_PROGRESS`, `REVIEW`, `DONE`, `BLOCKED`) với huy hiệu độ ưu tiên, hạn ngạch, mã task font-mono, trạng thái khóa điều kiện tiên quyết (`Lock` / `Unlock`), deadline quá hạn, cùng các nút thao tác nhanh trực tiếp trên card: Duyệt bài (`TaskReviewModal`), Gỡ chặn (`unblockTask`), Duyệt gia hạn (`TaskExtensionReviewModal`), Phân công AI (`onOpenAiAssign`).
+    * `LeaderDependencyGraph`: Sơ đồ các tầng giai đoạn (Phases) kết nối bằng đường cong SVG Bezier tự động điều chỉnh tọa độ, thể hiện rõ đường xanh liền cho điều kiện đã hoàn thành và đường cam đứt nét cho điều kiện đang chờ.
+    * `TaskViewModal`: Cho phép Leader bấm vào bất kỳ thẻ task nào trên Kanban hoặc Sơ đồ phụ thuộc để mở nhanh toàn bộ thông tin chi tiết nhiệm vụ mà không cần rời trang.
+  - **Giới hạn số lượng (Query Limit)**: Khi ở chế độ Kanban hoặc Sơ đồ phụ thuộc, hệ thống tự động tăng `limit` lên 100 để hiển thị trọn vẹn toàn bộ công việc của nhóm/sprint thay vì bị cắt vụn ở mức 10 dòng của Table view.
+

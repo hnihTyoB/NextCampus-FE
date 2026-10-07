@@ -454,6 +454,13 @@ export default function TaskCreateModal({ onCloseModal }: Props) {
         : "border-border bg-card focus:border-primary-light/40"
     } ${extra}`;
 
+  const textareaClass = (name: keyof CreateTaskPayload, extra = "") =>
+    `w-full rounded-xl border px-4 py-2.5 sm:py-3 text-xs sm:text-sm text-foreground placeholder:text-muted focus:outline-none transition ${
+      errors[name]
+        ? "border-red-400/60 focus:border-red-400"
+        : "border-border bg-card focus:border-primary-light/40"
+    } ${extra}`;
+
   const ErrorMsg = ({ name }: { name: keyof CreateTaskPayload }) =>
     errors[name] ? (
       <p className="mt-1 flex items-center gap-1.5 text-xs text-red-400 animate-fadeIn">
@@ -714,7 +721,7 @@ export default function TaskCreateModal({ onCloseModal }: Props) {
                 rows={2}
                 placeholder="Mô tả bối cảnh và yêu cầu chi tiết của công việc..."
                 {...register("description", { maxLength: { value: 2000, message: "Mô tả tối đa 2000 ký tự" } })}
-                className={inputClass("description", "resize-none")}
+                className={textareaClass("description", "resize-none")}
               />
               <ErrorMsg name="description" />
             </div>
@@ -728,7 +735,7 @@ export default function TaskCreateModal({ onCloseModal }: Props) {
                   rows={2}
                   placeholder="Tiêu chí để đánh giá task hoàn thành..."
                   {...register("acceptanceCriteria", { maxLength: { value: 2000, message: "Tối đa 2000 ký tự" } })}
-                  className={inputClass("acceptanceCriteria", "resize-none")}
+                  className={textareaClass("acceptanceCriteria", "resize-none")}
                 />
                 <ErrorMsg name="acceptanceCriteria" />
               </div>
@@ -741,7 +748,7 @@ export default function TaskCreateModal({ onCloseModal }: Props) {
                   rows={2}
                   placeholder="Ghi chú kỹ thuật hoặc lưu ý thêm..."
                   {...register("taskNotes", { maxLength: { value: 2000, message: "Tối đa 2000 ký tự" } })}
-                  className={inputClass("taskNotes", "resize-none")}
+                  className={textareaClass("taskNotes", "resize-none")}
                 />
                 <ErrorMsg name="taskNotes" />
               </div>

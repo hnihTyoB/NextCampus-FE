@@ -2,6 +2,7 @@
 
 import { useState, useRef, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { Download, Upload, CheckCircle, XCircle, AlertTriangle, FileSpreadsheet, BookOpen } from "lucide-react";
 import Button from "@/components/ui/Button";
 import Table from "@/components/ui/Table";
@@ -29,6 +30,7 @@ const STEPS = [
 ];
 
 export default function TaskImportModal({ onCloseModal }: Props) {
+  const t = useTranslations("leader.tasks");
   const [step, setStep] = useState<Step>("template");
   const [showInstructions, setShowInstructions] = useState(false);
   const [file, setFile] = useState<File | null>(null);
@@ -193,9 +195,10 @@ export default function TaskImportModal({ onCloseModal }: Props) {
                   variant="primary"
                   size="md"
                   isLoading={downloadMutation.isPending}
+                  loadingText={t("downloadingTemplate")}
                   onClick={() => downloadMutation.mutate()}
                 >
-                  <Download className="h-4 w-4 mr-2" />
+                  {!downloadMutation.isPending && <Download className="h-4 w-4 mr-2" />}
                   Tải tệp mẫu (.xlsx)
                 </Button>
                 <Button
@@ -277,9 +280,10 @@ export default function TaskImportModal({ onCloseModal }: Props) {
                   variant="glass"
                   size="md"
                   isLoading={previewMutation.isPending}
+                  loadingText={t("readingFile")}
                   onClick={() => fileInputRef.current?.click()}
                 >
-                  <Upload className="h-4 w-4 mr-2" />
+                  {!previewMutation.isPending && <Upload className="h-4 w-4 mr-2" />}
                   Chọn tệp Excel (.xlsx)
                 </Button>
                 {file && (
@@ -467,10 +471,11 @@ export default function TaskImportModal({ onCloseModal }: Props) {
                 variant="primary"
                 size="md"
                 isLoading={executeMutation.isPending}
+                loadingText={t("importingTasks")}
                 onClick={handleExecute}
                 disabled={previewData.validRows.length === 0}
               >
-                <FileSpreadsheet className="h-4 w-4 mr-2" />
+                {!executeMutation.isPending && <FileSpreadsheet className="h-4 w-4 mr-2" />}
                 Tiến hành nhập {previewData.validRows.length} công việc
               </Button>
             </div>

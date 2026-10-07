@@ -311,6 +311,9 @@ export default function TaskEditModal({ taskId, onClose, onCloseModal }: Props) 
   const inputClass = (name: keyof UpdateTaskPayload, extra = "") =>
     `w-full h-[42px] sm:h-[46px] rounded-xl border px-4 text-xs sm:text-sm text-foreground placeholder:text-muted focus:outline-none ${errors[name] ? "border-red-400/60 focus:border-red-400" : "border-border bg-card focus:border-primary-light/40"} ${extra}`;
 
+  const textareaClass = (name: keyof UpdateTaskPayload, extra = "") =>
+    `w-full rounded-xl border px-4 py-2.5 sm:py-3 text-xs sm:text-sm text-foreground placeholder:text-muted focus:outline-none ${errors[name] ? "border-red-400/60 focus:border-red-400" : "border-border bg-card focus:border-primary-light/40"} ${extra}`;
+
   const ErrorMsg = ({ name }: { name: keyof UpdateTaskPayload }) =>
     errors[name] ? <p className="mt-1 text-xs text-red-400">{errors[name]?.message}</p> : null;
 
@@ -410,19 +413,19 @@ export default function TaskEditModal({ taskId, onClose, onCloseModal }: Props) 
 
         <div>
           <label className="mb-1 block text-sm font-medium text-foreground">{tm("description")}</label>
-          <textarea rows={2} placeholder={tm("descriptionPlaceholder")} {...register("description", { maxLength: { value: 2000, message: tm("descriptionMaxLength") } })} className={inputClass("description", "resize-none")} />
+          <textarea rows={2} placeholder={tm("descriptionPlaceholder")} {...register("description", { maxLength: { value: 2000, message: tm("descriptionMaxLength") } })} className={textareaClass("description", "resize-none")} />
           <ErrorMsg name="description" />
         </div>
 
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="mb-1 block text-sm font-medium text-foreground">{tm("acceptanceCriteria")}</label>
-            <textarea rows={2} placeholder={tm("acceptanceCriteriaPlaceholder")} {...register("acceptanceCriteria", { maxLength: { value: 2000, message: tm("criteriaMaxLength") } })} className={inputClass("acceptanceCriteria", "resize-none")} />
+            <textarea rows={2} placeholder={tm("acceptanceCriteriaPlaceholder")} {...register("acceptanceCriteria", { maxLength: { value: 2000, message: tm("criteriaMaxLength") } })} className={textareaClass("acceptanceCriteria", "resize-none")} />
             <ErrorMsg name="acceptanceCriteria" />
           </div>
           <div>
             <label className="mb-1 block text-sm font-medium text-foreground">{tm("notes")}</label>
-            <textarea rows={2} placeholder={tm("notesPlaceholder")} {...register("taskNotes", { maxLength: { value: 2000, message: tm("notesMaxLength") } })} className={inputClass("taskNotes", "resize-none")} />
+            <textarea rows={2} placeholder={tm("notesPlaceholder")} {...register("taskNotes", { maxLength: { value: 2000, message: tm("notesMaxLength") } })} className={textareaClass("taskNotes", "resize-none")} />
             <ErrorMsg name="taskNotes" />
           </div>
         </div>
