@@ -13,34 +13,12 @@ import InternWeeklyEvaluationStats from "./InternWeeklyEvaluationStats";
 import { useWeeklyEvaluations } from "@/hooks/weekly-evaluation/useWeeklyEvaluations";
 import {
   RATING_COLORS,
-  RATING_SCORES,
-  CRITERIA_SECTIONS,
+  computeEvaluationScore,
+  getGradeFromScore,
   type RatingLevel,
   type WeeklyEvaluation,
   type WeeklyEvaluationQueryParams,
 } from "@/types/weekly-evaluation";
-
-function computeEvaluationScore(item: WeeklyEvaluation): number {
-  if (item.ratings) {
-    const allKeys = CRITERIA_SECTIONS.flatMap((s) => s.criteria.map((c) => c.key));
-    const validScores = allKeys
-      .map((k) => (item.ratings?.[k] ? RATING_SCORES[item.ratings[k]] : null))
-      .filter((s): s is number => s !== null);
-    if (validScores.length > 0) {
-      return parseFloat((validScores.reduce((a, b) => a + b, 0) / validScores.length).toFixed(1));
-    }
-  }
-  return item.score ?? item.totalScore ?? 0;
-}
-
-function getRatingLevel(score: number): RatingLevel {
-  if (score >= 9.0) return "TOT";
-  if (score >= 8.0) return "KHA";
-  if (score >= 6.5) return "KHA";
-  if (score >= 5.0) return "TB";
-  if (score >= 3.5) return "TBY";
-  return "YEU";
-}
 
 export default function InternWeeklyEvaluationList() {
   const t = useTranslations("intern.weeklyEvaluation");
@@ -64,16 +42,19 @@ export default function InternWeeklyEvaluationList() {
     () => response?.data ?? response?.items ?? [],
     [response],
   );
-  const meta =
-    response?.meta ??
-    (response
-      ? {
-          total: response.total ?? 0,
-          page: response.page ?? 1,
-          limit: response.limit ?? 10,
-          totalPages: response.totalPages ?? 1,
-        }
-      : undefined);
+  const meta = useMemo(
+    () =>
+      response?.meta ??
+      (response
+        ? {
+            total: response.total ?? 0,
+            page: response.page ?? 1,
+            limit: response.limit ?? 10,
+            totalPages: response.totalPages ?? 1,
+          }
+        : undefined),
+    [response],
+  );
 
 
   const handlePageChange = (newPage: number) => {
@@ -179,7 +160,15 @@ export default function InternWeeklyEvaluationList() {
             data={evaluations}
             render={(item: WeeklyEvaluation) => {
               const scoreVal = computeEvaluationScore(item);
-              const level = getRatingLevel(scoreVal);
+              const level: RatingLevel =
+                item.grade &&
+                (item.grade === "TOT" ||
+                  item.grade === "KHA" ||
+                  item.grade === "TB" ||
+                  item.grade === "TBY" ||
+                  item.grade === "YEU")
+                  ? (item.grade as RatingLevel)
+                  : getGradeFromScore(scoreVal);
               const isReviewed = !!(item.viewedAt || item.reviewedAt);
 
               return (

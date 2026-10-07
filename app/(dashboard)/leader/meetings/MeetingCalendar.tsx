@@ -61,6 +61,8 @@ export default function MeetingCalendar({
   const { data, isPending, isError } = useMeetings({
     startTimeFrom,
     startTimeTo,
+    startDate: startTimeFrom,
+    endDate: startTimeTo,
     limit: 100,
     sortBy: "startTime",
     order: "asc",

@@ -208,6 +208,55 @@ export interface WeeklyEvaluation {
   };
 }
 
+/**
+ * Tính điểm trung bình (thang điểm 10, làm tròn 1 chữ số thập phân) từ bảng 12 tiêu chí đánh giá chuẩn
+ */
+export function computeTotalFromRatings(
+  ratings?: EvaluationRatings | Record<string, unknown> | null,
+): number {
+  if (!ratings) return 0;
+  const allKeys = CRITERIA_SECTIONS.flatMap((s) => s.criteria.map((c) => c.key));
+  const validScores = allKeys
+    .map((k) => {
+      const lvl = getRatingLevel(ratings, k);
+      return lvl && RATING_SCORES[lvl] !== undefined ? RATING_SCORES[lvl] : null;
+    })
+    .filter((score): score is number => typeof score === "number");
+  if (validScores.length === 0) return 0;
+  return parseFloat(
+    (validScores.reduce((a, b) => a + b, 0) / validScores.length).toFixed(1),
+  );
+}
+
+/**
+ * Phân loại mức đánh giá (TOT, KHA, TB, TBY, YEU) dựa trên điểm số (thang 10)
+ */
+export function getGradeFromScore(score: number): RatingLevel {
+  if (score >= 8.0) return "TOT";
+  if (score >= 6.5) return "KHA";
+  if (score >= 5.0) return "TB";
+  if (score >= 3.5) return "TBY";
+  return "YEU";
+}
+
+/**
+ * Tính điểm đánh giá của một bản ghi WeeklyEvaluation, ưu tiên ratings tính ra điểm thực tế (hoặc fallback score/totalScore)
+ */
+export function computeEvaluationScore(item?: Partial<WeeklyEvaluation> | null): number {
+  if (!item) return 0;
+  if (item.ratings) {
+    const computed = computeTotalFromRatings(item.ratings);
+    if (computed > 0) return computed;
+  }
+  if (typeof item.score === "number") {
+    return parseFloat(item.score.toFixed(1));
+  }
+  if (typeof item.totalScore === "number") {
+    return parseFloat(item.totalScore.toFixed(1));
+  }
+  return 0;
+}
+
 // ─── Response wrappers ──────────────────────────────────────────────────────
 
 export interface WeeklyEvaluationSuccessResponse {

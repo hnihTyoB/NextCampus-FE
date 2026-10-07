@@ -58,6 +58,8 @@ export default function WeekMeetingsCard({
   const { data, isPending } = useMeetings({
     startTimeFrom: monday.toISOString(),
     startTimeTo: sunday.toISOString(),
+    startDate: monday.toISOString(),
+    endDate: sunday.toISOString(),
     sortBy: "startTime",
     order: "asc",
     limit: 50,
@@ -65,22 +67,26 @@ export default function WeekMeetingsCard({
 
   const meetings = useMemo(() => {
     const list = data?.data ?? [];
-    if (scope === "all") return list;
     const userId = state.user?.id;
-    if (!userId) return list;
-    return list.filter((m) => isUserParticipating(m, userId));
-  }, [data?.data, scope, state.user?.id]);
+    return list.filter((m) => {
+      const d = new Date(m.startTime);
+      const inThisWeek = d >= monday && d <= sunday;
+      const isParticipating = scope === "all" || (userId ? isUserParticipating(m, userId) : false);
+      return inThisWeek && isParticipating;
+    });
+  }, [data?.data, scope, state.user?.id, monday, sunday]);
 
   const grouped = useMemo(() => {
     const map = new Map<number, Meeting[]>();
     for (let i = 0; i < 7; i++) map.set(i, []);
     for (const m of meetings) {
       const d = new Date(m.startTime);
+      if (d < monday || d > sunday) continue;
       const dayIndex = d.getDay() === 0 ? 6 : d.getDay() - 1;
-      map.get(dayIndex)!.push(m);
+      map.get(dayIndex)?.push(m);
     }
     return map;
-  }, [meetings]);
+  }, [meetings, monday, sunday]);
 
   function formatTime(iso: string) {
     return new Date(iso).toLocaleTimeString(isVi ? "vi-VN" : "en-US", {

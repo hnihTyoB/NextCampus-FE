@@ -18,7 +18,14 @@ import WeeklyEvaluationStats, { type WeeklyEvaluationOverviewStats } from "./Wee
 import WeeklyEvaluationFilter from "./WeeklyEvaluationFilter";
 import WeeklyEvaluationExportButton from "./WeeklyEvaluationExportButton";
 import WeeklyEvaluationCreateModal from "./WeeklyEvaluationCreateModal";
-import { RATING_COLORS, type RatingLevel, type WeeklyEvaluationQueryParams, type WeeklyEvaluation } from "@/types/weekly-evaluation";
+import {
+  RATING_COLORS,
+  computeEvaluationScore,
+  getGradeFromScore,
+  type RatingLevel,
+  type WeeklyEvaluationQueryParams,
+  type WeeklyEvaluation,
+} from "@/types/weekly-evaluation";
 
 const COLUMNS = "minmax(240px, 2.5fr) minmax(120px, 1.2fr) minmax(150px, 1.5fr) minmax(100px, 1fr) minmax(200px, 2.2fr)";
 
@@ -93,7 +100,7 @@ export default function WeeklyEvaluationList() {
         aiAssistedCount: 0,
       };
     }
-    const scores = allEvaluations.map((e) => e.score ?? e.totalScore ?? 0);
+    const scores = allEvaluations.map((e) => computeEvaluationScore(e));
     const sumScore = scores.reduce((acc, s) => acc + s, 0);
     const avgScore = sumScore / total;
     const goodCount = scores.filter((s) => s >= 6.5).length;
@@ -143,14 +150,6 @@ export default function WeeklyEvaluationList() {
   const totalPages = meta?.totalPages ?? 1;
   const currentPage = meta?.page ?? 1;
 
-  const getRatingLevel = (score: number): RatingLevel => {
-    if (score >= 8.0) return "TOT";
-    if (score >= 6.5) return "KHA";
-    if (score >= 5.0) return "TB";
-    if (score >= 3.5) return "TBY";
-    return "YEU";
-  };
-
   // Client-side filtering for search and rating if needed
   const ratingFilter = searchParams.get("rating");
   const filteredEvaluations = useMemo(() => {
@@ -165,8 +164,17 @@ export default function WeeklyEvaluationList() {
     }
     if (ratingFilter) {
       result = result.filter((item) => {
-        const scoreVal = item.score ?? item.totalScore ?? 0;
-        return getRatingLevel(scoreVal) === ratingFilter;
+        const scoreVal = computeEvaluationScore(item);
+        const itemLevel =
+          item.grade &&
+          (item.grade === "TOT" ||
+            item.grade === "KHA" ||
+            item.grade === "TB" ||
+            item.grade === "TBY" ||
+            item.grade === "YEU")
+            ? (item.grade as RatingLevel)
+            : getGradeFromScore(scoreVal);
+        return itemLevel === ratingFilter;
       });
     }
     return result;
@@ -268,8 +276,16 @@ export default function WeeklyEvaluationList() {
           <Table.Body
             data={filteredEvaluations}
             render={(item: WeeklyEvaluation) => {
-              const scoreVal = item.score ?? item.totalScore ?? 0;
-              const level = getRatingLevel(scoreVal);
+              const scoreVal = computeEvaluationScore(item);
+              const level: RatingLevel =
+                item.grade &&
+                (item.grade === "TOT" ||
+                  item.grade === "KHA" ||
+                  item.grade === "TB" ||
+                  item.grade === "TBY" ||
+                  item.grade === "YEU")
+                  ? (item.grade as RatingLevel)
+                  : getGradeFromScore(scoreVal);
               const createdDate = new Date(item.createdAt).toLocaleDateString("vi-VN", {
                 day: "2-digit",
                 month: "2-digit",

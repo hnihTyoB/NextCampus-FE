@@ -22,7 +22,20 @@ export const meetingService = {
   getMeetings: async (
     params?: MeetingQueryParams,
   ): Promise<MeetingListResponse> => {
-    const response = await api.get<MeetingListResponse>("/meetings", { params });
+    const queryParams: Record<string, unknown> = params ? { ...params } : {};
+    if (queryParams.startTimeFrom && !queryParams.startDate) {
+      queryParams.startDate = queryParams.startTimeFrom;
+    }
+    if (queryParams.startTimeTo && !queryParams.endDate) {
+      queryParams.endDate = queryParams.startTimeTo;
+    }
+    if (queryParams.startDate && !queryParams.startTimeFrom) {
+      queryParams.startTimeFrom = queryParams.startDate;
+    }
+    if (queryParams.endDate && !queryParams.startTimeTo) {
+      queryParams.startTimeTo = queryParams.endDate;
+    }
+    const response = await api.get<MeetingListResponse>("/meetings", { params: queryParams });
     return response.data;
   },
 

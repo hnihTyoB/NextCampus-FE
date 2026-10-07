@@ -142,6 +142,8 @@ export interface MeetingQueryParams {
   participantId?: string;
   startTimeFrom?: string;
   startTimeTo?: string;
+  startDate?: string;
+  endDate?: string;
   endTimeFrom?: string;
   endTimeTo?: string;
   sortBy?: "createdAt" | "startTime" | "title";
