@@ -33,6 +33,9 @@ export default function TaskGroupCreateModal({
   const [maxWorkloadDays, setMaxWorkloadDays] = useState(14);
   const [nameError, setNameError] = useState("");
 
+  const effectiveDepartmentId =
+    departmentId || (departments.length > 0 ? departments[0].id : "");
+
   const deptOptions: SelectOption[] = useMemo(
     () => [
       { value: "", label: t("leader.taskGroups.selectDept") },
@@ -82,7 +85,7 @@ export default function TaskGroupCreateModal({
       {
         name: name.trim(),
         description: description.trim() || undefined,
-        departmentId: departmentId || null,
+        departmentId: effectiveDepartmentId || null,
         status,
         memberIds: selectedMemberIds,
         maxWorkloadDays,
@@ -162,7 +165,7 @@ export default function TaskGroupCreateModal({
             label={t("leader.taskGroups.deptLabel")}
             placeholder={t("leader.taskGroups.selectDept")}
             options={deptOptions}
-            value={departmentId}
+            value={effectiveDepartmentId}
             onChange={(val) => setDepartmentId(val)}
             searchable={departments.length > 6}
           />

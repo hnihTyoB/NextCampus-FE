@@ -13,19 +13,20 @@ import TaskAiRecommendationModal from "../TaskAiRecommendationModal";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 
 const priorityBadge: Record<string, string> = {
-  HIGH: "bg-rose-500/10 text-rose-400 border border-rose-500/20",
-  MEDIUM: "bg-amber-500/10 text-amber-400 border border-amber-500/20",
-  LOW: "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20",
+  HIGH: "border border-red-300 bg-red-100/80 text-red-800 dark:border-rose-500/20 dark:bg-rose-500/10 dark:text-rose-400",
+  MEDIUM: "border border-amber-300 bg-amber-100/80 text-amber-800 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-400",
+  LOW: "border border-emerald-300 bg-emerald-100/80 text-emerald-800 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-400",
 };
 
 const statusBadge: Record<string, string> = {
-  DONE: "border-emerald-500/20 bg-emerald-500/10 text-emerald-400",
-  IN_PROGRESS: "border-sky-500/20 bg-sky-500/10 text-sky-400",
-  REVIEW: "border-purple-500/20 bg-purple-500/10 text-purple-400",
-  TODO: "border-slate-700 bg-slate-800/60 text-slate-400",
-  BLOCKED: "border-rose-500/30 bg-rose-500/10 text-rose-400",
-  PENDING_APPROVAL: "border-amber-500/20 bg-amber-500/10 text-amber-400",
-  UNASSIGNED: "border-orange-500/20 bg-orange-500/10 text-orange-400",
+  DONE: "border-emerald-300 bg-emerald-100/80 text-emerald-800 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-400",
+  IN_PROGRESS: "border-sky-300 bg-sky-100/80 text-sky-800 dark:border-sky-500/20 dark:bg-sky-500/10 dark:text-sky-400",
+  REVIEW: "border-purple-300 bg-purple-100/80 text-purple-800 dark:border-purple-500/20 dark:bg-purple-500/10 dark:text-purple-400",
+  TODO: "border-slate-300 bg-slate-100/90 text-slate-700 dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-400",
+  BLOCKED: "border-rose-300 bg-rose-100/80 text-rose-800 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-400",
+  PENDING_APPROVAL: "border-amber-300 bg-amber-100/80 text-amber-800 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-400",
+  EXTENSION_PENDING: "border-amber-300 bg-amber-100/90 text-amber-800 font-bold dark:border-amber-400/40 dark:bg-amber-500/15 dark:text-amber-300",
+  UNASSIGNED: "border-orange-300 bg-orange-100/80 text-orange-800 dark:border-orange-500/20 dark:bg-orange-500/10 dark:text-orange-400",
 };
 
 function getFileIcon(mime: string) {
@@ -54,12 +55,36 @@ export default function TaskDetailPage() {
 
 function TaskDetailContent() {
   const td = useTranslations("leader.tasks.detail");
+  const t = useTranslations("leader.tasks");
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const { data, isLoading } = useTask(id);
   const task = data?.data;
   const [showAi, setShowAi] = useState(false);
   const unblockAssignment = useUnblockTaskAssignment();
+
+  const getStatusLabel = (s: string) => {
+    switch (s) {
+      case "TODO":
+        return t("statusTodo");
+      case "IN_PROGRESS":
+        return t("statusInProgress");
+      case "REVIEW":
+        return t("statusReview");
+      case "DONE":
+        return t("statusDone");
+      case "BLOCKED":
+        return t("statusBlocked");
+      case "PENDING_APPROVAL":
+        return t("statusPendingApproval");
+      case "EXTENSION_PENDING":
+        return t("statusExtensionPending");
+      case "UNASSIGNED":
+        return t("statusUnassigned");
+      default:
+        return s.replace("_", " ");
+    }
+  };
 
   const { data: submissionsData } = useTaskSubmissions(
     task?.assignment?.id ? { assignmentId: task.assignment.id, sortBy: "attempt", order: "asc", limit: 50 } : undefined,
@@ -92,7 +117,7 @@ function TaskDetailContent() {
           <span className="font-mono text-xs font-semibold px-2 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700/60">{task.code || "—"}</span>
           {task.priority && <span className={`text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-md ${priorityBadge[task.priority] ?? ""}`}>{task.priority}</span>}
           <span className={`inline-flex rounded-md px-2 py-0.5 text-xs font-semibold border ${statusBadge[task.assignment?.status ?? "TODO"] ?? ""}`}>
-            {(task.assignment?.status ?? "TODO").replace("_", " ")}
+            {getStatusLabel(task.assignment?.status ?? "TODO")}
           </span>
           {(!task.assignment || !task.assignment.internId) && (
             <button onClick={() => setShowAi(true)} className="ml-auto flex items-center gap-1.5 rounded-xl border border-sky-500/30 bg-sky-500/10 px-3 py-1.5 text-xs font-semibold text-sky-400 hover:bg-sky-500/20 hover:border-sky-500/50 transition-all">
