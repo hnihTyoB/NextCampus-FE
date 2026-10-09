@@ -403,7 +403,11 @@ export default function TaskDetailModal({
                 <DetailRow
                   icon={Calendar}
                   label={t("targetDeadline")}
-                  value={new Date(basicTask.deadline).toLocaleDateString("vi-VN")}
+                  value={
+                    basicTask.deadline
+                      ? new Date(basicTask.deadline).toLocaleDateString("vi-VN")
+                      : "—"
+                  }
                 />
                 <DetailRow
                   icon={Calendar}

@@ -3,6 +3,7 @@
 import { useState, useContext, useRef, useMemo, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import {
   Plus,
   Loader2,
@@ -17,6 +18,7 @@ import {
   AlertCircle,
   UserCheck,
   Users,
+  Clock,
 } from "lucide-react";
 import { toast } from "react-hot-toast";
 import axios from "axios";
@@ -59,12 +61,12 @@ function countWorkingDaysInclusive(startDate: string, endDate: string) {
 }
 
 const ALLOWED_TYPES = new Set([
-  "image/jpeg","image/png","image/webp","image/gif",
-  "application/pdf","application/msword",
+  "image/jpeg", "image/png", "image/webp", "image/gif",
+  "application/pdf", "application/msword",
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-  "application/zip","application/x-zip-compressed","application/x-rar-compressed","application/vnd.rar","application/x-7z-compressed",
-  "video/mp4","video/webm",
-  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet","application/vnd.ms-excel",
+  "application/zip", "application/x-zip-compressed", "application/x-rar-compressed", "application/vnd.rar", "application/x-7z-compressed",
+  "video/mp4", "video/webm",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "application/vnd.ms-excel",
 ]);
 
 type FileCategory = "image" | "video" | "archive" | "doc" | "other";
@@ -114,6 +116,7 @@ interface LinkItem {
 let nextId = 0;
 
 export default function TaskCreateModal({ onCloseModal }: Props) {
+  const tc = useTranslations("leader.tasks.createModal");
   const createTask = useCreateTask();
   const createAssignment = useCreateTaskAssignment();
   const lookupAssignmentIntern = useLookupAssignmentIntern();
@@ -144,7 +147,7 @@ export default function TaskCreateModal({ onCloseModal }: Props) {
     const normalizedEmail = otherInternEmail.trim().toLowerCase();
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
       setSelectedInternId("");
-      setOtherInternEmailError("Enter a valid intern email.");
+      setOtherInternEmailError(tc("invalidInternEmail"));
       lookupAssignmentIntern.reset();
       return;
     }
@@ -157,9 +160,7 @@ export default function TaskCreateModal({ onCloseModal }: Props) {
       setOtherInternEmail(result.data.email);
       setSelectedInternId(result.data.id);
     } catch {
-      setOtherInternEmailError(
-        "No active intern from another team matches this email.",
-      );
+      setOtherInternEmailError(tc("otherTeamInternNotFound"));
     }
   };
 
@@ -169,15 +170,15 @@ export default function TaskCreateModal({ onCloseModal }: Props) {
     try {
       new URL(trimmed);
     } catch {
-      setLinkErr("Invalid URL format");
+      setLinkErr(tc("invalidUrl"));
       return;
     }
     if (linkItems.length >= MAX_LINKS) {
-      toast.error(`Maximum ${MAX_LINKS} links allowed`);
+      toast.error(tc("maxLinksLimit", { max: MAX_LINKS }));
       return;
     }
     if (linkItems.some((l) => l.fileUrl === trimmed)) {
-      toast.error("This URL has already been added");
+      toast.error(tc("duplicateUrl"));
       return;
     }
     setLinkErr("");
@@ -192,19 +193,19 @@ export default function TaskCreateModal({ onCloseModal }: Props) {
 
     for (const file of selected) {
       if (fileItems.length + valid.length >= MAX_FILES) {
-        toast.error(`Maximum ${MAX_FILES} files allowed`);
+        toast.error(tc("maxFilesLimit", { max: MAX_FILES }));
         break;
       }
       if (file.size > MAX_FILE_SIZE) {
-        toast.error(`"${file.name}" exceeds ${UPLOAD_LIMITS_MB.taskAttachment}MB limit`);
+        toast.error(tc("exceedsSizeLimit", { name: file.name, limit: UPLOAD_LIMITS_MB.taskAttachment }));
         continue;
       }
       if (!ALLOWED_TYPES.has(file.type)) {
-        toast.error(`"${file.name}" has unsupported file type`);
+        toast.error(tc("unsupportedFileType", { name: file.name }));
         continue;
       }
       if (fileItems.some((f) => f.name === file.name) || valid.some((f) => f.name === file.name)) {
-        toast.error(`"${file.name}" is a duplicate`, { icon: "⚠️" });
+        toast.error(tc("duplicateFile", { name: file.name }), { icon: "⚠️" });
         continue;
       }
       valid.push({ id: nextId++, file, name: file.name, size: file.size, mimeType: file.type });
@@ -252,29 +253,48 @@ export default function TaskCreateModal({ onCloseModal }: Props) {
   const startDateVal = watch("startDate");
   const estDaysVal = watch("estDays");
 
+  // Auto set startDate to TODAY when intern is selected and startDate is empty
+  useEffect(() => {
+    if (selectedInternId && !startDateVal) {
+      setValue("startDate", TODAY, { shouldValidate: true });
+    }
+  }, [selectedInternId, startDateVal, setValue]);
+
+  // Auto calculate deadline from startDate and estDays: startDate + (ceil(estDays) - 1)
+  useEffect(() => {
+    if (startDateVal && estDaysVal && Number.isFinite(estDaysVal) && estDaysVal > 0) {
+      const start = new Date(startDateVal);
+      if (!Number.isNaN(start.getTime())) {
+        const daysToAdd = Math.max(0, Math.ceil(estDaysVal) - 1);
+        const deadlineDate = new Date(start);
+        deadlineDate.setDate(deadlineDate.getDate() + daysToAdd);
+        const yyyy = deadlineDate.getFullYear();
+        const mm = String(deadlineDate.getMonth() + 1).padStart(2, "0");
+        const dd = String(deadlineDate.getDate()).padStart(2, "0");
+        const autoDeadline = `${yyyy}-${mm}-${dd}`;
+        setValue("deadline", autoDeadline, { shouldValidate: true });
+      }
+    } else {
+      // Khi thiếu startDate hoặc estDays, hạn chót để trống
+      setValue("deadline", "", { shouldValidate: true });
+    }
+  }, [startDateVal, estDaysVal, setValue]);
+
   useEffect(() => {
     register("startDate", {
       validate: (v) => {
         if (!v) return true;
-        if (v < TODAY) return "Start date cannot be in the past";
-        if (deadlineVal && v > deadlineVal) return "Start date must be on or before deadline";
+        if (v < TODAY) return tc("startDatePast");
         return true;
       },
     });
-    register("deadline", {
-      required: "Deadline is required",
-      validate: (v) => {
-        if (!v) return true;
-        if (v < TODAY) return "Deadline cannot be in the past";
-        if (startDateVal && v < startDateVal) return "Deadline must be on or after start date";
-        return true;
-      },
-    });
+    register("deadline");
     register("priority", {
-      validate: (v) => !v || ["HIGH", "MEDIUM", "LOW"].includes(v) || "Invalid priority",
+      validate: (v) => !v || ["HIGH", "MEDIUM", "LOW"].includes(v) || tc("priorityPlaceholder"),
     });
     register("taskGroupId");
-  }, [register, deadlineVal, startDateVal]);
+  }, [register, tc]);
+
   const availableWorkingDays = startDateVal && deadlineVal
     ? countWorkingDaysInclusive(startDateVal, deadlineVal)
     : null;
@@ -286,7 +306,7 @@ export default function TaskCreateModal({ onCloseModal }: Props) {
     e.preventDefault();
     let valid = false;
     if (step === 1) valid = await trigger(["title", "code", "priority", "taskGroupId"]);
-    if (step === 2) valid = await trigger(["startDate", "estDays", "deadline", "phase", "module", "description", "acceptanceCriteria", "taskNotes"]);
+    if (step === 2) valid = await trigger(["startDate", "estDays", "phase", "module", "description", "acceptanceCriteria", "taskNotes"]);
     if (valid) setStep((s) => s + 1);
   };
 
@@ -298,15 +318,15 @@ export default function TaskCreateModal({ onCloseModal }: Props) {
       ...data,
       estDays: data.estDays,
       startDate: data.startDate || undefined,
+      deadline: data.deadline || undefined,
       taskGroupId: data.taskGroupId || undefined,
       priority: data.priority || undefined,
       code: data.code || undefined,
     };
 
     try {
-      console.log("[TaskCreateModal] Submit — assignMode:", assignMode, "selectedInternId:", selectedInternId);
       setIsUploading(true);
-      
+
       let taskId = createdTaskId;
       if (!taskId) {
         const result = await createTask.mutateAsync(payload);
@@ -327,7 +347,6 @@ export default function TaskCreateModal({ onCloseModal }: Props) {
             });
           } catch (err) {
             console.error("[TaskCreateModal] Failed to create assignment:", err);
-            // error toast handled by useCreateTaskAssignment
           }
         }
         queryClient.invalidateQueries({ queryKey: ["tasks"] });
@@ -400,7 +419,6 @@ export default function TaskCreateModal({ onCloseModal }: Props) {
       queryClient.invalidateQueries({ queryKey: ["tasks"], exact: false });
 
       // assign task to intern if selected
-      console.log("[TaskCreateModal] Assign:", { assignMode, selectedInternId });
       if (selectedInternId) {
         try {
           await createAssignment.mutateAsync({
@@ -411,7 +429,7 @@ export default function TaskCreateModal({ onCloseModal }: Props) {
               : {}),
           });
         } catch {
-          // error toast handled by useCreateTaskAssignment
+          // handled by hook
         }
       }
 
@@ -419,12 +437,11 @@ export default function TaskCreateModal({ onCloseModal }: Props) {
       queryClient.invalidateQueries({ queryKey: ["tasks"], exact: false });
 
       if (failCount > 0) {
-        toast.error(`${failCount} attachment(s) failed. ${successCount} uploaded successfully.`);
+        toast.error(tc("taskCreatedPartial", { fail: failCount, success: successCount }));
         setIsUploading(false);
         submittingRef.current = false;
       } else {
-        toast.success("Task created with all attachments.");
-        // brief delay so user sees final status before reset
+        toast.success(tc("taskCreatedSuccess"));
         setTimeout(() => {
           reset();
           setStep(1);
@@ -439,7 +456,7 @@ export default function TaskCreateModal({ onCloseModal }: Props) {
         }, 800);
       }
     } catch {
-      toast.error("An unexpected error occurred. Please try again.");
+      toast.error(tc("unexpectedError"));
       setIsUploading(false);
       submittingRef.current = false;
     }
@@ -471,7 +488,7 @@ export default function TaskCreateModal({ onCloseModal }: Props) {
 
   return (
     <div className="flex flex-col">
-      {/* Sticky Header (Rule 44 Compliant: Icon + Heading inside a dedicated flex container) */}
+      {/* Sticky Header */}
       <div className="sticky top-0 z-20 bg-white/95 dark:bg-[#0c1222]/95 backdrop-blur-xl pb-4 pt-1 -mt-1 border-b border-border dark:border-white/10 pr-10 sm:pr-12">
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-3 min-w-0">
@@ -480,14 +497,14 @@ export default function TaskCreateModal({ onCloseModal }: Props) {
             </div>
             <div className="min-w-0">
               <h3 className="text-xl font-bold metal-text truncate">
-                Tạo Công Việc
+                {tc("title")}
               </h3>
               <p className="text-xs text-muted mt-0.5 truncate">
                 {step === 1
-                  ? "Bước 1/3 — Thông tin cơ bản & Phân nhóm"
+                  ? tc("step1Subtitle")
                   : step === 2
-                  ? "Bước 2/3 — Kế hoạch, Thời hạn & Mô tả"
-                  : "Bước 3/3 — Đính kèm tệp & Giao việc"}
+                  ? tc("step2Subtitle")
+                  : tc("step3Subtitle")}
               </p>
             </div>
           </div>
@@ -497,9 +514,9 @@ export default function TaskCreateModal({ onCloseModal }: Props) {
       {/* Stepper indicator */}
       <div className="my-5 flex items-center justify-center">
         {[
-          { num: 1, label: "Cơ bản", desc: "Tên & phân nhóm" },
-          { num: 2, label: "Kế hoạch", desc: "Thời hạn & chi tiết" },
-          { num: 3, label: "Hoàn tất", desc: "Tệp & giao việc" },
+          { num: 1, label: tc("step1Label"), desc: tc("step1Desc") },
+          { num: 2, label: tc("step2Label"), desc: tc("step2Desc") },
+          { num: 3, label: tc("step3Label"), desc: tc("step3Desc") },
         ].map((s, i, arr) => (
           <div key={s.num} className="flex items-center">
             <div className="flex flex-col items-center gap-1.5">
@@ -538,14 +555,14 @@ export default function TaskCreateModal({ onCloseModal }: Props) {
           <>
             <div>
               <label className="mb-1.5 flex items-center gap-1 text-xs sm:text-sm font-medium text-foreground/90 select-none">
-                Tiêu đề <span className="text-red-400">*</span>
+                {tc("titleLabel")} <span className="text-red-400">*</span>
               </label>
               <input
                 type="text"
-                placeholder="VD: Xây dựng API xác thực người dùng..."
+                placeholder={tc("titlePlaceholder")}
                 {...register("title", {
-                  required: "Vui lòng nhập tiêu đề công việc",
-                  maxLength: { value: 255, message: "Tiêu đề không được vượt quá 255 ký tự" },
+                  required: tc("titleRequired"),
+                  maxLength: { value: 255, message: tc("titleMaxLength") },
                 })}
                 className={inputClass("title")}
               />
@@ -555,14 +572,14 @@ export default function TaskCreateModal({ onCloseModal }: Props) {
             <div className="grid grid-cols-2 gap-3 sm:gap-4">
               <div>
                 <label className="mb-1.5 flex items-center gap-1 text-xs sm:text-sm font-medium text-foreground/90 select-none">
-                  Mã công việc
+                  {tc("codeLabel")}
                 </label>
                 <input
                   type="text"
-                  placeholder="VD: BE1-01"
+                  placeholder={tc("codePlaceholder")}
                   {...register("code", {
-                    pattern: { value: /^[A-Za-z0-9._-]*$/, message: "Chỉ cho phép chữ, số, dấu . _ -" },
-                    maxLength: { value: 50, message: "Mã không được vượt quá 50 ký tự" },
+                    pattern: { value: /^[A-Za-z0-9._-]*$/, message: tc("codePattern") },
+                    maxLength: { value: 50, message: tc("codeMaxLength") },
                   })}
                   className={inputClass("code")}
                 />
@@ -571,19 +588,19 @@ export default function TaskCreateModal({ onCloseModal }: Props) {
 
               <div>
                 <label className="mb-1.5 flex items-center gap-1 text-xs sm:text-sm font-medium text-foreground/90 select-none">
-                  Mức độ ưu tiên
+                  {tc("priorityLabel")}
                 </label>
                 <Select
                   value={watch("priority") ?? ""}
                   onChange={(v) => {
                     setValue("priority", (v || undefined) as CreateTaskPayload["priority"], { shouldValidate: true });
                   }}
-                  placeholder="Chọn mức độ..."
+                  placeholder={tc("priorityPlaceholder")}
                   options={[
-                    { value: "", label: "Chọn mức độ..." },
-                    { value: "HIGH", label: "P0 — Cao" },
-                    { value: "MEDIUM", label: "P1 — Trung bình" },
-                    { value: "LOW", label: "P2 — Thấp" },
+                    { value: "", label: tc("priorityPlaceholder") },
+                    { value: "HIGH", label: tc("priorityHigh") },
+                    { value: "MEDIUM", label: tc("priorityMedium") },
+                    { value: "LOW", label: tc("priorityLow") },
                   ]}
                 />
                 <ErrorMsg name="priority" />
@@ -592,16 +609,16 @@ export default function TaskCreateModal({ onCloseModal }: Props) {
 
             <div>
               <label className="mb-1.5 flex items-center gap-1 text-xs sm:text-sm font-medium text-foreground/90 select-none">
-                Nhóm công việc
+                {tc("groupLabel")}
               </label>
               <Select
                 value={watch("taskGroupId") ?? ""}
                 onChange={(v) => {
                   setValue("taskGroupId", v || undefined, { shouldValidate: true });
                 }}
-                placeholder="Không chọn nhóm..."
+                placeholder={tc("noGroup")}
                 options={[
-                  { value: "", label: "Không chọn nhóm..." },
+                  { value: "", label: tc("noGroup") },
                   ...taskGroups.map((tg) => ({
                     value: tg.id,
                     label: tg.name,
@@ -618,7 +635,7 @@ export default function TaskCreateModal({ onCloseModal }: Props) {
             <div className="grid grid-cols-1 gap-3 sm:gap-4 md:grid-cols-3">
               <div>
                 <label className="mb-1.5 flex items-center gap-1 text-xs sm:text-sm font-medium text-foreground/90 select-none">
-                  Ngày bắt đầu
+                  {tc("startDateLabel")}
                 </label>
                 <DatePicker
                   value={watch("startDate") ?? ""}
@@ -632,47 +649,53 @@ export default function TaskCreateModal({ onCloseModal }: Props) {
                   }}
                 />
                 <ErrorMsg name="startDate" />
-                <p className="mt-1 text-[11px] text-muted">Ngày dự kiến khởi động (tuỳ chọn).</p>
+                <p className="mt-1 text-[11px] text-muted">{tc("startDateHint")}</p>
               </div>
 
               <div>
                 <label className="mb-1.5 flex items-center gap-1 text-xs sm:text-sm font-medium text-foreground/90 select-none">
-                  Số ngày ước tính <span className="text-red-400">*</span>
+                  {tc("estDaysLabel")} <span className="text-red-400">*</span>
                 </label>
                 <input
                   type="number"
                   step="any"
                   min={0.1}
-                  placeholder="VD: 3.5"
+                  placeholder={tc("estDaysPlaceholder")}
                   {...register("estDays", {
                     valueAsNumber: true,
-                    required: "Vui lòng nhập số ngày ước tính",
-                    min: { value: 0.1, message: "Tối thiểu 0.1 ngày" },
-                    max: { value: 365, message: "Tối đa 365 ngày" },
+                    required: tc("estDaysRequired"),
+                    min: { value: 0.1, message: tc("estDaysMin") },
+                    max: { value: 365, message: tc("estDaysMax") },
                   })}
                   className={inputClass("estDays")}
                 />
                 <ErrorMsg name="estDays" />
-                <p className="mt-1 text-[11px] text-muted">Dùng để tính toán workload thành viên.</p>
+                <p className="mt-1 text-[11px] text-muted">{tc("estDaysHint")}</p>
               </div>
 
               <div>
-                <label className="mb-1.5 flex items-center gap-1 text-xs sm:text-sm font-medium text-foreground/90 select-none">
-                  Hạn chót <span className="text-red-400">*</span>
+                <label className="mb-1.5 flex items-center justify-between gap-1 text-xs sm:text-sm font-medium text-foreground/90 select-none">
+                  <span>{tc("deadlineLabel")}</span>
+                  <span className="text-[11px] text-cyan-400 font-normal">
+                    {tc("deadlineAutoBadge")}
+                  </span>
                 </label>
-                <DatePicker
-                  value={watch("deadline") ?? ""}
-                  minDate={startDateVal || TODAY}
-                  placeholder="YYYY-MM-DD"
-                  onChange={(d) => {
-                    setValue("deadline", d, { shouldValidate: true });
-                  }}
-                  onClear={() => {
-                    setValue("deadline", "", { shouldValidate: true });
-                  }}
-                />
-                <ErrorMsg name="deadline" />
-                <p className="mt-1 text-[11px] text-muted">Thời hạn hoàn thành cam kết.</p>
+                <div className="relative">
+                  <input
+                    type="text"
+                    readOnly
+                    disabled
+                    value={deadlineVal ? `${deadlineVal} (23:59:59)` : tc("deadlineNotSet")}
+                    className="w-full h-[42px] sm:h-[46px] rounded-xl border border-border bg-slate-100/80 dark:bg-white/5 px-4 pr-10 text-xs sm:text-sm text-foreground/80 font-medium cursor-not-allowed focus:outline-none"
+                  />
+                  <Clock className="absolute right-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted pointer-events-none" />
+                </div>
+                <input type="hidden" {...register("deadline")} />
+                <p className="mt-1 text-[11px] text-muted">
+                  {startDateVal && estDaysVal
+                    ? tc("deadlineAutoFormula", { estDays: estDaysVal })
+                    : tc("deadlineNoStartHint")}
+                </p>
               </div>
             </div>
 
@@ -680,7 +703,10 @@ export default function TaskCreateModal({ onCloseModal }: Props) {
               <div className="flex items-start gap-2 rounded-xl border border-amber-400/25 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
                 <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
                 <p>
-                  Lịch trình chỉ có {availableWorkingDays} ngày làm việc, nhưng task ước tính {estDaysVal} ngày. Cân nhắc gia hạn deadline.
+                  {tc("scheduleRiskWarning", {
+                    available: availableWorkingDays ?? 0,
+                    est: estDaysVal ?? 0,
+                  })}
                 </p>
               </div>
             )}
@@ -688,12 +714,12 @@ export default function TaskCreateModal({ onCloseModal }: Props) {
             <div className="grid grid-cols-2 gap-3 sm:gap-4">
               <div>
                 <label className="mb-1.5 flex items-center gap-1 text-xs sm:text-sm font-medium text-foreground/90 select-none">
-                  Giai đoạn
+                  {tc("phaseLabel")}
                 </label>
                 <input
                   type="text"
-                  placeholder="VD: Phase 1 - Foundation"
-                  {...register("phase", { maxLength: { value: 100, message: "Tối đa 100 ký tự" } })}
+                  placeholder={tc("phasePlaceholder")}
+                  {...register("phase", { maxLength: { value: 100, message: tc("phaseMaxLength") } })}
                   className={inputClass("phase")}
                 />
                 <ErrorMsg name="phase" />
@@ -701,12 +727,12 @@ export default function TaskCreateModal({ onCloseModal }: Props) {
 
               <div>
                 <label className="mb-1.5 flex items-center gap-1 text-xs sm:text-sm font-medium text-foreground/90 select-none">
-                  Module
+                  {tc("moduleLabel")}
                 </label>
                 <input
                   type="text"
-                  placeholder="VD: Setup"
-                  {...register("module", { maxLength: { value: 100, message: "Tối đa 100 ký tự" } })}
+                  placeholder={tc("modulePlaceholder")}
+                  {...register("module", { maxLength: { value: 100, message: tc("moduleMaxLength") } })}
                   className={inputClass("module")}
                 />
                 <ErrorMsg name="module" />
@@ -715,12 +741,12 @@ export default function TaskCreateModal({ onCloseModal }: Props) {
 
             <div>
               <label className="mb-1.5 flex items-center gap-1 text-xs sm:text-sm font-medium text-foreground/90 select-none">
-                Mô tả chi tiết
+                {tc("descLabel")}
               </label>
               <textarea
                 rows={2}
-                placeholder="Mô tả bối cảnh và yêu cầu chi tiết của công việc..."
-                {...register("description", { maxLength: { value: 2000, message: "Mô tả tối đa 2000 ký tự" } })}
+                placeholder={tc("descPlaceholder")}
+                {...register("description", { maxLength: { value: 2000, message: tc("descMaxLength") } })}
                 className={textareaClass("description", "resize-none")}
               />
               <ErrorMsg name="description" />
@@ -729,12 +755,12 @@ export default function TaskCreateModal({ onCloseModal }: Props) {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               <div>
                 <label className="mb-1.5 flex items-center gap-1 text-xs sm:text-sm font-medium text-foreground/90 select-none">
-                  Tiêu chí chấp nhận (DoD)
+                  {tc("criteriaLabel")}
                 </label>
                 <textarea
                   rows={2}
-                  placeholder="Tiêu chí để đánh giá task hoàn thành..."
-                  {...register("acceptanceCriteria", { maxLength: { value: 2000, message: "Tối đa 2000 ký tự" } })}
+                  placeholder={tc("criteriaPlaceholder")}
+                  {...register("acceptanceCriteria", { maxLength: { value: 2000, message: tc("criteriaMaxLength") } })}
                   className={textareaClass("acceptanceCriteria", "resize-none")}
                 />
                 <ErrorMsg name="acceptanceCriteria" />
@@ -742,12 +768,12 @@ export default function TaskCreateModal({ onCloseModal }: Props) {
 
               <div>
                 <label className="mb-1.5 flex items-center gap-1 text-xs sm:text-sm font-medium text-foreground/90 select-none">
-                  Ghi chú bổ sung
+                  {tc("notesLabel")}
                 </label>
                 <textarea
                   rows={2}
-                  placeholder="Ghi chú kỹ thuật hoặc lưu ý thêm..."
-                  {...register("taskNotes", { maxLength: { value: 2000, message: "Tối đa 2000 ký tự" } })}
+                  placeholder={tc("notesPlaceholder")}
+                  {...register("taskNotes", { maxLength: { value: 2000, message: tc("notesMaxLength") } })}
                   className={textareaClass("taskNotes", "resize-none")}
                 />
                 <ErrorMsg name="taskNotes" />
@@ -763,13 +789,13 @@ export default function TaskCreateModal({ onCloseModal }: Props) {
             <div>
               <div className="mb-1.5 flex items-center justify-between">
                 <label className="flex items-center gap-1 text-xs sm:text-sm font-medium text-foreground/90 select-none">
-                  Tài liệu đính kèm
+                  {tc("attachmentsLabel")}
                 </label>
                 {(fileItems.length > 0 || linkItems.length > 0) && (
                   <span className="text-xs text-muted">
-                    {fileItems.length > 0 && `${fileItems.length} tệp`}
+                    {fileItems.length > 0 && tc("countFiles", { n: fileItems.length })}
                     {fileItems.length > 0 && linkItems.length > 0 && ", "}
-                    {linkItems.length > 0 && `${linkItems.length} liên kết`}
+                    {linkItems.length > 0 && tc("countLinks", { n: linkItems.length })}
                   </span>
                 )}
               </div>
@@ -785,13 +811,16 @@ export default function TaskCreateModal({ onCloseModal }: Props) {
                       className="w-full h-[42px] sm:h-[46px] rounded-xl border border-border bg-card px-4 py-2 text-xs sm:text-sm text-foreground file:mr-3 file:rounded-lg file:border-0 file:bg-cyan-500/15 file:px-3 file:py-1 file:text-xs file:font-medium file:text-cyan-300 file:cursor-pointer focus:border-primary-light/40 focus:outline-none transition disabled:opacity-50"
                     />
                     <p className="text-[11px] text-muted">
-                      Tối đa {MAX_FILES} tệp, mỗi tệp dung lượng tối đa {UPLOAD_LIMITS_MB.taskAttachment} MB.
+                      {tc("uploadLimitsHint", {
+                        maxFiles: MAX_FILES,
+                        maxSize: UPLOAD_LIMITS_MB.taskAttachment,
+                      })}
                     </p>
                   </div>
                 )}
                 {fileItems.length >= MAX_FILES && (
                   <p className="rounded-xl border border-amber-500/20 bg-amber-500/5 px-4 py-2.5 text-xs text-amber-300">
-                    Đã đạt giới hạn ({MAX_FILES} tệp tối đa). Hãy xoá bớt để thêm tệp mới.
+                    {tc("fileLimitReached", { max: MAX_FILES })}
                   </p>
                 )}
 
@@ -803,12 +832,12 @@ export default function TaskCreateModal({ onCloseModal }: Props) {
                       disabled={isUploading}
                       onChange={(e) => { setLinkUrl(e.target.value); if (linkErr) setLinkErr(""); }}
                       onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addLink(); } }}
-                      placeholder="Hoặc dán liên kết tài liệu (URL)..."
+                      placeholder={tc("linkPlaceholder")}
                       className="flex-1 h-[42px] sm:h-[46px] rounded-xl border border-border bg-card px-4 text-xs sm:text-sm text-foreground placeholder:text-muted focus:border-primary-light/40 focus:outline-none transition disabled:opacity-50"
                     />
                     <Button type="button" variant="glass" size="md" onClick={addLink} disabled={!linkUrl.trim() || isUploading}>
                       <Link className="h-3.5 w-3.5 mr-1" />
-                      Thêm link
+                      {tc("addLinkBtn")}
                     </Button>
                   </div>
                 )}
@@ -822,7 +851,7 @@ export default function TaskCreateModal({ onCloseModal }: Props) {
                         onClick={() => { setFileItems([]); setLinkItems([]); setFileStatuses({}); setLinkStatuses({}); }}
                         className="mb-1 text-xs text-muted hover:text-red-400 transition-colors cursor-pointer"
                       >
-                        Xoá tất cả
+                        {tc("clearAllBtn")}
                       </button>
                     )}
 
@@ -879,7 +908,7 @@ export default function TaskCreateModal({ onCloseModal }: Props) {
                 )}
 
                 {fileItems.length === 0 && linkItems.length === 0 && (
-                  <p className="mt-2 text-xs text-muted italic">Chưa có tệp hay liên kết nào được đính kèm.</p>
+                  <p className="mt-2 text-xs text-muted italic">{tc("noAttachmentsYet")}</p>
                 )}
               </div>
             </div>
@@ -887,7 +916,7 @@ export default function TaskCreateModal({ onCloseModal }: Props) {
             {/* Assign to Intern */}
             <div className="pt-2 border-t border-border dark:border-white/10">
               <label className="mb-2 flex items-center gap-1 text-xs sm:text-sm font-medium text-foreground/90 select-none">
-                Phân công thực tập sinh
+                {tc("assignInternLabel")}
               </label>
               <div className="flex gap-2 mb-3">
                 {(["none", "my", "other"] as const).map((mode) => (
@@ -908,12 +937,12 @@ export default function TaskCreateModal({ onCloseModal }: Props) {
                         : "bg-slate-50 text-muted border border-border hover:bg-slate-100 hover:text-foreground dark:bg-white/5 dark:border-white/10 dark:hover:bg-white/10 dark:hover:text-foreground"
                     }`}
                   >
-                    {mode === "none" && "Chưa giao việc"}
+                    {mode === "none" && tc("modeNone")}
                     {mode === "my" && (
-                      <span className="flex items-center gap-1.5"><UserCheck className="h-3.5 w-3.5" />TTS nhóm tôi</span>
+                      <span className="flex items-center gap-1.5"><UserCheck className="h-3.5 w-3.5" />{tc("modeMy")}</span>
                     )}
                     {mode === "other" && (
-                      <span className="flex items-center gap-1.5"><Users className="h-3.5 w-3.5" />TTS nhóm khác</span>
+                      <span className="flex items-center gap-1.5"><Users className="h-3.5 w-3.5" />{tc("modeOther")}</span>
                     )}
                   </button>
                 ))}
@@ -924,9 +953,9 @@ export default function TaskCreateModal({ onCloseModal }: Props) {
                   value={selectedInternId}
                   onChange={(val) => setSelectedInternId(val)}
                   disabled={isUploading}
-                  placeholder="Chọn thực tập sinh trong nhóm..."
+                  placeholder={tc("selectMyInternPlaceholder")}
                   options={[
-                    { value: "", label: "Chọn thực tập sinh trong nhóm..." },
+                    { value: "", label: tc("selectMyInternPlaceholder") },
                     ...myInterns.map((intern) => ({
                       value: intern.id,
                       label: `${intern.fullName} (${intern.user.email})`,
@@ -953,7 +982,7 @@ export default function TaskCreateModal({ onCloseModal }: Props) {
                           void handleOtherInternLookup();
                         }
                       }}
-                      placeholder="Nhập chính xác email thực tập sinh..."
+                      placeholder={tc("otherInternEmailPlaceholder")}
                       disabled={isUploading || lookupAssignmentIntern.isPending}
                       className="min-w-0 flex-1 h-[42px] sm:h-[46px] rounded-xl border border-border bg-card px-4 text-xs sm:text-sm text-foreground placeholder:text-muted focus:border-primary-light/40 focus:outline-none transition disabled:opacity-50"
                     />
@@ -967,7 +996,7 @@ export default function TaskCreateModal({ onCloseModal }: Props) {
                       {lookupAssignmentIntern.isPending ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
                       ) : (
-                        "Kiểm tra"
+                        tc("checkEmailBtn")
                       )}
                     </Button>
                   </div>
@@ -985,21 +1014,23 @@ export default function TaskCreateModal({ onCloseModal }: Props) {
                         {lookupAssignmentIntern.data.data.fullName}
                       </p>
                       <p className="mt-0.5 text-xs text-slate-400">
-                        Leader: {lookupAssignmentIntern.data.data.leader.fullName || lookupAssignmentIntern.data.data.leader.email}
+                        {tc("leaderLabel", {
+                          name: lookupAssignmentIntern.data.data.leader.fullName || lookupAssignmentIntern.data.data.leader.email,
+                        })}
                       </p>
                     </div>
                   )}
 
                   {!selectedInternId && !otherInternEmailError && (
                     <p className="text-xs text-muted">
-                      Nhập email để hệ thống xác minh tài khoản TTS và Leader quản lý.
+                      {tc("verifyHint")}
                     </p>
                   )}
                 </div>
               )}
 
               {assignMode === "my" && myInterns.length === 0 && (
-                <p className="text-xs text-muted italic">Hiện chưa có thực tập sinh nào trong nhóm phụ trách.</p>
+                <p className="text-xs text-muted italic">{tc("noInternsInTeam")}</p>
               )}
             </div>
           </>
@@ -1009,7 +1040,7 @@ export default function TaskCreateModal({ onCloseModal }: Props) {
         <div className="flex items-center justify-between pt-3 border-t border-border dark:border-white/10">
           {step > 1 ? (
             <Button type="button" variant="glass" size="md" disabled={isPending} onClick={() => setStep((s) => s - 1)}>
-              ← Quay lại
+              {tc("backBtn")}
             </Button>
           ) : (
             <div />
@@ -1017,11 +1048,11 @@ export default function TaskCreateModal({ onCloseModal }: Props) {
 
           <div className="flex items-center gap-3">
             <Button type="button" variant="glass" size="md" disabled={isPending} onClick={onCloseModal}>
-              Hủy
+              {tc("cancelBtn")}
             </Button>
             {step < 3 ? (
               <Button type="button" variant="primary" size="md" onClick={handleNext}>
-                Tiếp tục →
+                {tc("nextBtn")}
               </Button>
             ) : (
               <Button
@@ -1032,7 +1063,7 @@ export default function TaskCreateModal({ onCloseModal }: Props) {
                 disabled={isPending || (assignMode === "other" && !selectedInternId)}
               >
                 {!isPending && <Plus className="h-4 w-4 mr-2" />}
-                Tạo công việc
+                {tc("createBtn")}
               </Button>
             )}
           </div>

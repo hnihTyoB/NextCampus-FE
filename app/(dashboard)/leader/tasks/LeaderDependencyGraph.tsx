@@ -324,13 +324,15 @@ export default function LeaderDependencyGraph({
                         <div className="flex items-center gap-1 text-[10px] font-mono">
                           <Calendar className="h-3 w-3 text-muted" />
                           <span>
-                            {new Date(task.deadline).toLocaleDateString(
-                              locale === "en" ? "en-US" : "vi-VN",
-                              {
-                                month: "numeric",
-                                day: "numeric",
-                              },
-                            )}
+                            {task.deadline
+                              ? new Date(task.deadline).toLocaleDateString(
+                                  locale === "en" ? "en-US" : "vi-VN",
+                                  {
+                                    month: "numeric",
+                                    day: "numeric",
+                                  },
+                                )
+                              : "—"}
                           </span>
                         </div>
                       </div>
