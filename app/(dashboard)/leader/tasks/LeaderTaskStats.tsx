@@ -329,7 +329,7 @@ function TaskTable({ filters }: { filters: TaskQueryParams }) {
             <div className="truncate text-sm">{task.title}</div>
             <div className="text-sm text-muted">{task.assignment?.intern?.fullName ?? "—"}</div>
             <div><PriorityBadge priority={task.priority} /></div>
-            <div className="text-sm text-muted">{new Date(task.deadline).toLocaleDateString("vi-VN")}</div>
+            <div className="text-sm text-muted">{task.deadline ? new Date(task.deadline).toLocaleDateString("vi-VN") : "—"}</div>
           </Table.Row>
         )} />
         {meta && meta.totalPages > 1 && (
@@ -375,7 +375,7 @@ function DoneTaskTable({ filters }: { filters: TaskQueryParams }) {
             <div className="text-sm text-muted">{task.assignment?.intern?.fullName ?? "—"}</div>
             <div className="text-sm text-muted">{task.phase ?? "—"}</div>
             <div><PriorityBadge priority={task.priority} /></div>
-            <div className="text-sm text-muted">{new Date(task.deadline).toLocaleDateString("vi-VN")}</div>
+            <div className="text-sm text-muted">{task.deadline ? new Date(task.deadline).toLocaleDateString("vi-VN") : "—"}</div>
           </Table.Row>
         )} />
         {meta && meta.totalPages > 1 && (

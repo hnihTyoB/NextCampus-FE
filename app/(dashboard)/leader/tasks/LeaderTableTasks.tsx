@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useMemo, useContext, useCallback, useId } from "react";
 import { createPortal } from "react-dom";
-import { Layers, MoreVertical, Eye, Pencil, Trash2, Loader2, ChevronLeft, ChevronRight, Check, ChevronDown, UserPlus, UserX, Sparkles, Building, RotateCcw, Clock } from "lucide-react";
+import { Layers, MoreVertical, Eye, Pencil, Trash2, Loader2, ChevronLeft, ChevronRight, Check, ChevronDown, UserPlus, UserX, Sparkles, Building, RotateCcw, Clock, Calendar } from "lucide-react";
 import { useTranslations } from "next-intl";
 import DOMPurify from "isomorphic-dompurify";
 import TaskAiRecommendationModal from "./TaskAiRecommendationModal";
@@ -34,6 +34,7 @@ import LeaderTaskViewModeToggle, { type LeaderViewMode } from "./LeaderTaskViewM
 import LeaderKanbanBoard from "./LeaderKanbanBoard";
 import LeaderDependencyGraph from "./LeaderDependencyGraph";
 import TaskViewModal from "./TaskViewModal";
+import TaskScheduleAdjustModal from "./TaskScheduleAdjustModal";
 import { useForm } from "react-hook-form";
 import { useQueryClient } from "@tanstack/react-query";
 import {
@@ -46,7 +47,8 @@ import { extractTasks, type Task, type TaskQueryParams } from "@/types/task";
 
 type GroupAction = { type: "view" | "edit" | "delete"; groupId: string; groupName: string } | null;
 
-const checkIsOverdue = (deadline: string) => {
+const checkIsOverdue = (deadline?: string | null) => {
+  if (!deadline) return false;
   const d = new Date(deadline);
   d.setHours(23, 59, 59, 999);
   return d < new Date();
@@ -59,6 +61,7 @@ export default function LeaderTableTasks() {
   const [taskAction, setTaskAction] = useState<{ type: "edit" | "delete"; taskId: string; taskTitle: string } | null>(null);
   const [aiTask, setAiTask] = useState<{ taskId: string; taskTitle: string; isAssigned: boolean } | null>(null);
   const [groupAiModal, setGroupAiModal] = useState<{ groupId: string; groupName: string } | null>(null);
+  const [adjustScheduleGroup, setAdjustScheduleGroup] = useState<{ groupId: string; groupName: string } | null>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const taskTriggerRef = useRef<HTMLButtonElement>(null);
 
@@ -267,6 +270,23 @@ export default function LeaderTableTasks() {
                   <span>AI Phân công</span>
                 </Button>
               )}
+
+              {taskGroupId && can("TASK_UPDATE") && (
+                <Button
+                  variant="glass"
+                  size="sm"
+                  onClick={() => {
+                    const currentGroup = groups.find((g) => g.id === taskGroupId);
+                    if (currentGroup) {
+                      setAdjustScheduleGroup({ groupId: currentGroup.id, groupName: currentGroup.name });
+                    }
+                  }}
+                  className="flex items-center gap-1.5 text-xs text-cyan-400 border border-cyan-500/20 hover:bg-cyan-500/10 transition-all font-semibold active:scale-95 cursor-pointer"
+                >
+                  <Calendar className="h-3.5 w-3.5 mr-1" />
+                  <span>{t("adjustSchedule")}</span>
+                </Button>
+              )}
             </div>
           </div>
 
@@ -435,6 +455,15 @@ export default function LeaderTableTasks() {
         groupId={groupAiModal.groupId}
         groupName={groupAiModal.groupName}
         onClose={() => setGroupAiModal(null)}
+      />
+    )}
+
+    {/* Task Schedule Adjustment Modal */}
+    {adjustScheduleGroup && (
+      <TaskScheduleAdjustModal
+        initialTaskGroupId={adjustScheduleGroup.groupId}
+        initialTaskGroupName={adjustScheduleGroup.groupName}
+        onClose={() => setAdjustScheduleGroup(null)}
       />
     )}
 
@@ -822,7 +851,7 @@ function TaskTableRow({
         />
       </div>
       <div className="text-sm text-muted whitespace-nowrap">
-        {new Date(task.deadline).toLocaleDateString("vi-VN")}
+        {task.deadline ? new Date(task.deadline).toLocaleDateString("vi-VN") : "—"}
       </div>
       <div className="relative text-right">
         {hasAnyTaskAction && (
@@ -1266,7 +1295,7 @@ function TaskCardItem({
         <div>
           <span className="text-muted block text-[11px] mb-0.5">{t("colDeadline")}</span>
           <span className="text-foreground font-medium">
-            {new Date(task.deadline).toLocaleDateString("vi-VN")}
+            {task.deadline ? new Date(task.deadline).toLocaleDateString("vi-VN") : "—"}
           </span>
         </div>
       </div>
@@ -1630,7 +1659,7 @@ function InlineAssignCell({
 }: {
   taskId: string;
   assignment: { id: string; internId: string; status: string; intern?: { id: string; fullName: string } } | null;
-  deadline: string;
+  deadline?: string | null;
   taskGroupDepartmentId?: string | null;
 }) {
   const t = useTranslations("leader.tasks");

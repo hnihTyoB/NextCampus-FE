@@ -180,6 +180,8 @@ export default function TaskEditModal({ taskId, onClose, onCloseModal }: Props) 
   });
 
   const deadlineVal = watch("deadline");
+  const startDateVal = watch("startDate");
+  const estDaysVal = watch("estDays");
 
   useEffect(() => {
     register("startDate", {
@@ -190,7 +192,6 @@ export default function TaskEditModal({ taskId, onClose, onCloseModal }: Props) 
       },
     });
     register("deadline", {
-      required: tm("deadlineRequired"),
       validate: (v) => !v || v >= TODAY || tm("deadlinePast"),
     });
     register("priority", {
@@ -205,7 +206,20 @@ export default function TaskEditModal({ taskId, onClose, onCloseModal }: Props) 
       return;
     }
 
-    const payload: UpdateTaskPayload = { ...data, estDays: data.estDays || undefined, startDate: data.startDate || undefined, taskGroupId: data.taskGroupId || undefined, priority: data.priority || undefined, code: data.code || undefined, description: data.description || undefined, phase: data.phase || undefined, module: data.module || undefined, acceptanceCriteria: data.acceptanceCriteria || undefined, taskNotes: data.taskNotes || undefined };
+    const payload: UpdateTaskPayload = {
+      ...data,
+      estDays: data.estDays || undefined,
+      startDate: data.startDate || undefined,
+      deadline: data.deadline ? data.deadline : null,
+      taskGroupId: data.taskGroupId || undefined,
+      priority: data.priority || undefined,
+      code: data.code || undefined,
+      description: data.description || undefined,
+      phase: data.phase || undefined,
+      module: data.module || undefined,
+      acceptanceCriteria: data.acceptanceCriteria || undefined,
+      taskNotes: data.taskNotes || undefined,
+    };
     try {
       setIsUploading(true);
       await updateTask.mutateAsync({ id: taskId, payload });
@@ -332,7 +346,31 @@ export default function TaskEditModal({ taskId, onClose, onCloseModal }: Props) 
             <ErrorMsg name="title" />
           </div>
           <div>
-            <label className="mb-1 block text-xs sm:text-sm font-medium text-foreground">{tm("deadline")} <span className="text-red-400">*</span></label>
+            <div className="mb-1 flex items-center justify-between">
+              <label className="text-xs sm:text-sm font-medium text-foreground">
+                {tm("deadline")}
+              </label>
+              {startDateVal && estDaysVal && Number(estDaysVal) > 0 && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const start = new Date(startDateVal);
+                    if (!Number.isNaN(start.getTime())) {
+                      const daysToAdd = Math.max(0, Math.ceil(Number(estDaysVal)) - 1);
+                      const d = new Date(start);
+                      d.setDate(d.getDate() + daysToAdd);
+                      const yyyy = d.getFullYear();
+                      const mm = String(d.getMonth() + 1).padStart(2, "0");
+                      const dd = String(d.getDate()).padStart(2, "0");
+                      setValue("deadline", `${yyyy}-${mm}-${dd}`, { shouldValidate: true });
+                    }
+                  }}
+                  className="text-[11px] text-cyan-400 hover:text-cyan-300 underline cursor-pointer"
+                >
+                  {tm("autoCalculateDeadline")}
+                </button>
+              )}
+            </div>
             <DatePicker
               value={watch("deadline") ?? ""}
               minDate={watch("startDate") || TODAY}

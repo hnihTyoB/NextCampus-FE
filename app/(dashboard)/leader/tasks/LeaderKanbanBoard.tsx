@@ -74,7 +74,8 @@ const priorityBadge: Record<string, string> = {
   LOW: "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/30",
 };
 
-const checkIsOverdue = (deadline: string) => {
+const checkIsOverdue = (deadline?: string | null) => {
+  if (!deadline) return false;
   const d = new Date(deadline);
   d.setHours(23, 59, 59, 999);
   return d < new Date();
@@ -290,13 +291,15 @@ export default function LeaderKanbanBoard({
                           >
                             <Calendar className="h-3 w-3" />
                             <span>
-                              {new Date(task.deadline).toLocaleDateString(
-                                locale === "en" ? "en-US" : "vi-VN",
-                                {
-                                  month: "numeric",
-                                  day: "numeric",
-                                },
-                              )}
+                              {task.deadline
+                                ? new Date(task.deadline).toLocaleDateString(
+                                    locale === "en" ? "en-US" : "vi-VN",
+                                    {
+                                      month: "numeric",
+                                      day: "numeric",
+                                    },
+                                  )
+                                : "—"}
                             </span>
                           </div>
                         </div>

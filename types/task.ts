@@ -59,7 +59,7 @@ export interface Task {
   code: string | null;
   title: string;
   description: string | null;
-  deadline: string;
+  deadline: string | null;
   startDate: string | null;
   estDays: number | null;
   phase: string | null;
@@ -139,11 +139,11 @@ export interface TaskQueryParams {
 export interface CreateTaskPayload {
   title: string;
   description?: string;
-  deadline: string;
+  deadline?: string | null;
   estDays: number;
   priority?: TaskPriority;
   code?: string;
-  startDate?: string;
+  startDate?: string | null;
   phase?: string;
   module?: string;
   acceptanceCriteria?: string;
@@ -154,7 +154,7 @@ export interface CreateTaskPayload {
 export interface UpdateTaskPayload {
   title?: string;
   description?: string | null;
-  deadline?: string;
+  deadline?: string | null;
   priority?: TaskPriority;
   code?: string | null;
   startDate?: string | null;
@@ -173,8 +173,8 @@ export interface ImportTaskRow {
   excelCode: string;
   title: string;
   description: string;
-  deadline: string;
-  startDate?: string;
+  deadline?: string | null;
+  startDate?: string | null;
   priority: TaskPriority;
   ownerEmail?: string;
   supportEmail?: string;
@@ -262,4 +262,29 @@ export interface TaskAnalytics {
 export interface TaskAnalyticsResponse {
   success: boolean;
   data: TaskAnalytics;
+}
+
+// ─── Schedule Adjustment ──────────────────────────────────────────────────
+
+export interface AdjustTaskSchedulePayload {
+  taskGroupId?: string;
+  taskIds?: string[];
+  anchorStartDate?: string;
+  shiftDays?: number;
+}
+
+export interface AdjustTaskScheduleResponse {
+  success: boolean;
+  message: string;
+  data: {
+    adjustedTasksCount: number;
+    tasks: Array<{
+      id: string;
+      code: string | null;
+      title: string;
+      startDate: string | null;
+      deadline: string | null;
+      estDays: number | null;
+    }>;
+  };
 }

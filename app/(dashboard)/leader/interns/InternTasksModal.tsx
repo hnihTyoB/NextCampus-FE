@@ -485,15 +485,17 @@ function TaskDetailPanel({
   const { data: threadData, isLoading: threadLoading } = useTaskSubmissionThread(assignment?.id);
   const thread = threadData?.data?.thread ?? [];
 
-  const fmtDate = (dStr: string) =>
-    new Date(dStr).toLocaleDateString(locale === "vi" ? "vi-VN" : "en-GB", {
+  const fmtDate = (dStr?: string | null) => {
+    if (!dStr) return "—";
+    return new Date(dStr).toLocaleDateString(locale === "vi" ? "vi-VN" : "en-GB", {
       day: "2-digit",
       month: "2-digit",
       year: "numeric",
     });
+  };
 
   const isOverdue =
-    assignment && new Date(task.deadline) < new Date() && assignment.status !== "DONE";
+    assignment && task.deadline && new Date(task.deadline) < new Date() && assignment.status !== "DONE";
 
   return (
     <div className="space-y-6">

@@ -9,6 +9,8 @@ import type {
   ImportPreviewResponse,
   ImportResultResponse,
   TaskAnalyticsResponse,
+  AdjustTaskSchedulePayload,
+  AdjustTaskScheduleResponse,
 } from "@/types/task";
 import type { AiRecommendationResponse } from "@/types/task-allocation";
 
@@ -139,6 +141,17 @@ export const taskService = {
   // POST /tasks/:taskId/ai-recommendation
   getAiRecommendation: async (taskId: string): Promise<AiRecommendationResponse> => {
     const response = await api.post<AiRecommendationResponse>(`/tasks/${taskId}/ai-recommendation`);
+    return response.data;
+  },
+
+  // POST /tasks/adjust-schedule
+  adjustSchedule: async (
+    payload: AdjustTaskSchedulePayload,
+  ): Promise<AdjustTaskScheduleResponse> => {
+    const response = await api.post<AdjustTaskScheduleResponse>(
+      "/tasks/adjust-schedule",
+      payload,
+    );
     return response.data;
   },
 };
